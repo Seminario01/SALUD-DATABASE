@@ -1,15 +1,8 @@
--- ============================================================
--- Base de datos del Modulo de Salud - Version unificada
--- Combina el diseño original (Jeffry) con la ampliacion de
--- alcance de Denilson (farmacia, hospitalizaciones, practicantes,
--- auditoria, cuentas de paciente).
--- ============================================================
-
-CREATE DATABASE IF NOT EXISTS salud_db;
+vCREATE DATABASE IF NOT EXISTS salud_db;
 USE salud_db;
 
 -- ============================================================
--- BLOQUE 1: Tablas originales (ya usadas por la API / models.py)
+-- Modulo: Gestion de usuarios y pacientes
 -- ============================================================
 
 CREATE TABLE usuarios_roles (
@@ -36,6 +29,10 @@ CREATE TABLE pacientes (
     fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios_roles(id)
 );
+
+-- ============================================================
+-- Modulo: Citas y expedientes clinicos
+-- ============================================================
 
 CREATE TABLE citas_medicas (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -65,6 +62,10 @@ CREATE TABLE expedientes_clinicos (
     FOREIGN KEY (medico_id) REFERENCES usuarios_roles(id)
 );
 
+-- ============================================================
+-- Modulo: Recursos hospitalarios y turnos
+-- ============================================================
+
 CREATE TABLE recursos_hospitalarios (
     id INT AUTO_INCREMENT PRIMARY KEY,
     tipo ENUM('cama', 'ambulancia', 'cupo_consulta') NOT NULL,
@@ -88,6 +89,10 @@ CREATE TABLE turnos (
     FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
 );
 
+-- ============================================================
+-- Modulo: Presupuesto y vacunacion
+-- ============================================================
+
 CREATE TABLE presupuesto_hospitalario (
     id INT AUTO_INCREMENT PRIMARY KEY,
     periodo VARCHAR(20) NOT NULL,
@@ -108,7 +113,7 @@ CREATE TABLE vacunacion (
 );
 
 -- ============================================================
--- BLOQUE 2: Ampliacion de Denilson - catalogos sin dependencias
+-- Modulo: Catalogos generales
 -- ============================================================
 
 CREATE TABLE areas_hospital (
@@ -173,8 +178,7 @@ CREATE TABLE vacunas (
 );
 
 -- ============================================================
--- BLOQUE 3: Ampliacion de Denilson - tablas que referencian
--- pacientes/usuarios_roles/medicos (FKs ajustadas al Bloque 1)
+-- Modulo: Auditoria, cuentas, historial y hospitalizaciones
 -- ============================================================
 
 CREATE TABLE auditoria (
@@ -231,8 +235,7 @@ CREATE TABLE recetas (
 );
 
 -- ============================================================
--- BLOQUE 4: Ampliacion de Denilson - tablas de detalle
--- (dependen de tablas del Bloque 2 y 3)
+-- Modulo: Detalle de recetas, practicas y movimientos
 -- ============================================================
 
 CREATE TABLE detalle_receta (
@@ -272,3 +275,6 @@ CREATE TABLE movimientos_inventario (
     observacion TEXT,
     FOREIGN KEY (id_medicamento) REFERENCES medicamentos(id_medicamento)
 );
+
+
+/*DROP DATABASE IF EXISTS salud_db;*/
