@@ -1,6 +1,16 @@
--- Base de datos del Módulo de Salud
+-- ============================================================
+-- Base de datos del Modulo de Salud - Version unificada
+-- Combina el diseño original (Jeffry) con la ampliacion de
+-- alcance de Denilson (farmacia, hospitalizaciones, practicantes,
+-- auditoria, cuentas de paciente).
+-- ============================================================
+
 CREATE DATABASE IF NOT EXISTS salud_db;
 USE salud_db;
+
+-- ============================================================
+-- BLOQUE 1: Tablas originales (ya usadas por la API / models.py)
+-- ============================================================
 
 CREATE TABLE usuarios_roles (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -95,4 +105,170 @@ CREATE TABLE vacunacion (
     vacunas_pendientes TEXT,
     fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
+);
+
+-- ============================================================
+-- BLOQUE 2: Ampliacion de Denilson - catalogos sin dependencias
+-- ============================================================
+
+CREATE TABLE areas_hospital (
+    id_area INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT
+);
+
+CREATE TABLE especialidades (
+    id_especialidad INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT
+);
+
+CREATE TABLE medicamentos (
+    id_medicamento INT AUTO_INCREMENT PRIMARY KEY,
+    codigo VARCHAR(50) NOT NULL UNIQUE,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT,
+    existencia INT NOT NULL DEFAULT 0,
+    stock_minimo INT DEFAULT 10,
+    precio DECIMAL(10,2)
+);
+
+CREATE TABLE medicos (
+    id_medico INT AUTO_INCREMENT PRIMARY KEY,
+    colegiado VARCHAR(50) NOT NULL UNIQUE,
+    nombres VARCHAR(100) NOT NULL,
+    apellidos VARCHAR(100) NOT NULL,
+    especialidad VARCHAR(100),
+    telefono VARCHAR(20),
+    correo VARCHAR(100),
+    estado VARCHAR(20) DEFAULT 'ACTIVO'
+);
+
+CREATE TABLE practicantes (
+    id_practicante INT AUTO_INCREMENT PRIMARY KEY,
+    dpi VARCHAR(20) NOT NULL UNIQUE,
+    nombres VARCHAR(100) NOT NULL,
+    apellidos VARCHAR(100) NOT NULL,
+    universidad VARCHAR(100),
+    carrera VARCHAR(100),
+    fecha_inicio DATE,
+    fecha_fin DATE,
+    supervisor VARCHAR(100),
+    estado VARCHAR(20) DEFAULT 'ACTIVO'
+);
+
+CREATE TABLE servicios (
+    id_servicio INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT,
+    costo DECIMAL(10,2) NOT NULL,
+    estado VARCHAR(20) DEFAULT 'ACTIVO'
+);
+
+CREATE TABLE vacunas (
+    id_vacuna INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT,
+    dosis_requeridas INT NOT NULL
+);
+
+-- ============================================================
+-- BLOQUE 3: Ampliacion de Denilson - tablas que referencian
+-- pacientes/usuarios_roles/medicos (FKs ajustadas al Bloque 1)
+-- ============================================================
+
+CREATE TABLE auditoria (
+    id_auditoria INT AUTO_INCREMENT PRIMARY KEY,
+    id_usuario INT,
+    modulo VARCHAR(100),
+    accion VARCHAR(50),
+    tabla_afectada VARCHAR(100),
+    registro_id INT,
+    descripcion TEXT,
+    fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_usuario) REFERENCES usuarios_roles(id)
+);
+
+CREATE TABLE cuentas_paciente (
+    id_cuenta INT AUTO_INCREMENT PRIMARY KEY,
+    id_paciente INT NOT NULL,
+    saldo DECIMAL(10,2) DEFAULT 0.00,
+    estado VARCHAR(20) DEFAULT 'ACTIVA',
+    FOREIGN KEY (id_paciente) REFERENCES pacientes(id)
+);
+
+CREATE TABLE historial_medico (
+    id_historial INT AUTO_INCREMENT PRIMARY KEY,
+    id_paciente INT NOT NULL,
+    id_medico INT NOT NULL,
+    diagnostico TEXT,
+    tratamiento TEXT,
+    observaciones TEXT,
+    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_paciente) REFERENCES pacientes(id),
+    FOREIGN KEY (id_medico) REFERENCES medicos(id_medico)
+);
+
+CREATE TABLE hospitalizaciones (
+    id_hospitalizacion INT AUTO_INCREMENT PRIMARY KEY,
+    id_paciente INT NOT NULL,
+    fecha_ingreso DATETIME NOT NULL,
+    fecha_egreso DATETIME NULL,
+    sala VARCHAR(50),
+    cama VARCHAR(20),
+    diagnostico TEXT,
+    estado VARCHAR(20) DEFAULT 'ACTIVO',
+    FOREIGN KEY (id_paciente) REFERENCES pacientes(id)
+);
+
+CREATE TABLE recetas (
+    id_receta INT AUTO_INCREMENT PRIMARY KEY,
+    id_paciente INT NOT NULL,
+    id_medico INT NOT NULL,
+    fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_paciente) REFERENCES pacientes(id),
+    FOREIGN KEY (id_medico) REFERENCES medicos(id_medico)
+);
+
+-- ============================================================
+-- BLOQUE 4: Ampliacion de Denilson - tablas de detalle
+-- (dependen de tablas del Bloque 2 y 3)
+-- ============================================================
+
+CREATE TABLE detalle_receta (
+    id_detalle INT AUTO_INCREMENT PRIMARY KEY,
+    id_receta INT NOT NULL,
+    id_medicamento INT NOT NULL,
+    cantidad INT NOT NULL,
+    FOREIGN KEY (id_receta) REFERENCES recetas(id_receta),
+    FOREIGN KEY (id_medicamento) REFERENCES medicamentos(id_medicamento)
+);
+
+CREATE TABLE horas_practica (
+    id_hora INT AUTO_INCREMENT PRIMARY KEY,
+    id_practicante INT NOT NULL,
+    fecha DATE NOT NULL,
+    horas INT NOT NULL,
+    actividad TEXT,
+    FOREIGN KEY (id_practicante) REFERENCES practicantes(id_practicante)
+);
+
+CREATE TABLE movimientos_cuenta (
+    id_movimiento INT AUTO_INCREMENT PRIMARY KEY,
+    id_cuenta INT NOT NULL,
+    tipo_movimiento VARCHAR(20) NOT NULL,
+    monto DECIMAL(10,2) NOT NULL,
+    descripcion TEXT,
+    fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_cuenta) REFERENCES cuentas_paciente(id_cuenta)
+);
+
+CREATE TABLE movimientos_inventario (
+    id_movimiento INT AUTO_INCREMENT PRIMARY KEY,
+    id_medicamento INT NOT NULL,
+    tipo_movimiento VARCHAR(20) NOT NULL,
+    cantidad INT NOT NULL,
+    fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+    observacion TEXT,
+    FOREIGN KEY (id_medicamento) REFERENCES medicamentos(id_medicamento)
 );
