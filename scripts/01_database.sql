@@ -1,3 +1,0 @@
-CREATE DATABASE IF NOT EXISTS salud_db;
-
-USE salud_db;
