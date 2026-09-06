@@ -1,4 +1,4 @@
-vCREATE DATABASE IF NOT EXISTS salud_db;
+CREATE DATABASE IF NOT EXISTS salud_db;
 USE salud_db;
 
 -- ============================================================
@@ -274,6 +274,22 @@ CREATE TABLE movimientos_inventario (
     fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
     observacion TEXT,
     FOREIGN KEY (id_medicamento) REFERENCES medicamentos(id_medicamento)
+);
+
+-- ============================================================
+-- Modulo: Integracion externa - establecimientos de salud (WS-SALUD-02)
+-- ============================================================
+
+CREATE TABLE establecimientos (
+    id_establecimiento INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(150) NOT NULL,
+    tipo VARCHAR(50),
+    direccion VARCHAR(250),
+    departamento VARCHAR(100),
+    municipio VARCHAR(100),
+    telefono VARCHAR(20),
+    estado_servicio VARCHAR(50) DEFAULT 'ACTIVO',
+    tipo_atencion_disponible VARCHAR(150)
 );
 
 
