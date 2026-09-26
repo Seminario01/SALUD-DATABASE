@@ -1,4 +1,6 @@
-CREATE DATABASE IF NOT EXISTS salud_db;
+-- UTF-8 completo para tildes y ñ (área, vacunación, Peña...)
+SET NAMES utf8mb4;
+CREATE DATABASE IF NOT EXISTS salud_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE salud_db;
 
 -- ============================================================
