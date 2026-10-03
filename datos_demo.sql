@@ -115,7 +115,35 @@ BEGIN
 
     SELECT 'Datos de demostración cargados' AS resultado;
   ELSE
-    SELECT 'Los datos de demostración ya estaban cargados; no se cambió nada' AS resultado;
+    SELECT 'Los datos de demostración ya estaban cargados' AS resultado;
+  END IF;
+
+  -- Practicantes y sus horas (WS-SALUD-06 / WS-SALUD-07). Bloque aparte para
+  -- poder agregarlos a una base donde los pacientes demo ya estaban cargados.
+  IF (SELECT COUNT(*) FROM practicantes WHERE dpi = '2520123450106') = 0 THEN
+    INSERT INTO practicantes (dpi, nombres, apellidos, universidad, carrera, fecha_inicio, fecha_fin, supervisor, estado) VALUES
+      ('2520123450106', 'Daniela Sofía', 'Paredes Lima', 'Universidad de San Carlos de Guatemala', 'Médico y Cirujano', DATE_ADD(CURDATE(), INTERVAL -75 DAY), DATE_ADD(CURDATE(), INTERVAL 105 DAY), 'Dra. Ana María Recinos', 'ACTIVO'),
+      ('2521234560103', 'Rodrigo Andrés', 'Monterroso Gil', 'Universidad Mariano Gálvez de Guatemala', 'Médico y Cirujano', DATE_ADD(CURDATE(), INTERVAL -120 DAY), DATE_ADD(CURDATE(), INTERVAL 60 DAY), 'Dr. Julio César Ordóñez', 'ACTIVO'),
+      ('2522345670100', 'Valeria Isabel', 'Cifuentes Arana', 'Universidad Rafael Landívar', 'Licenciatura en Enfermería', DATE_ADD(CURDATE(), INTERVAL -30 DAY), DATE_ADD(CURDATE(), INTERVAL 150 DAY), 'Lcda. Marta Lucía Pineda', 'ACTIVO');
+    INSERT INTO horas_practica (id_practicante, fecha, horas, actividad) VALUES
+      ((SELECT id_practicante FROM practicantes WHERE dpi = '2520123450106'), DATE_SUB(CURDATE(), INTERVAL 70 DAY), 8, 'Inducción y normas del servicio'),
+      ((SELECT id_practicante FROM practicantes WHERE dpi = '2520123450106'), DATE_SUB(CURDATE(), INTERVAL 56 DAY), 8, 'Consulta externa supervisada'),
+      ((SELECT id_practicante FROM practicantes WHERE dpi = '2520123450106'), DATE_SUB(CURDATE(), INTERVAL 42 DAY), 8, 'Emergencia de adultos'),
+      ((SELECT id_practicante FROM practicantes WHERE dpi = '2520123450106'), DATE_SUB(CURDATE(), INTERVAL 28 DAY), 8, 'Jornada de vacunación escolar'),
+      ((SELECT id_practicante FROM practicantes WHERE dpi = '2520123450106'), DATE_SUB(CURDATE(), INTERVAL 14 DAY), 8, 'Consulta externa supervisada'),
+      ((SELECT id_practicante FROM practicantes WHERE dpi = '2520123450106'), DATE_SUB(CURDATE(), INTERVAL 3 DAY), 6, 'Encamamiento de medicina interna'),
+      ((SELECT id_practicante FROM practicantes WHERE dpi = '2521234560103'), DATE_SUB(CURDATE(), INTERVAL 110 DAY), 12, 'Turno de emergencia'),
+      ((SELECT id_practicante FROM practicantes WHERE dpi = '2521234560103'), DATE_SUB(CURDATE(), INTERVAL 90 DAY), 12, 'Turno de emergencia'),
+      ((SELECT id_practicante FROM practicantes WHERE dpi = '2521234560103'), DATE_SUB(CURDATE(), INTERVAL 70 DAY), 12, 'Cirugía general'),
+      ((SELECT id_practicante FROM practicantes WHERE dpi = '2521234560103'), DATE_SUB(CURDATE(), INTERVAL 50 DAY), 12, 'Pediatría'),
+      ((SELECT id_practicante FROM practicantes WHERE dpi = '2521234560103'), DATE_SUB(CURDATE(), INTERVAL 30 DAY), 12, 'Ginecología y obstetricia'),
+      ((SELECT id_practicante FROM practicantes WHERE dpi = '2521234560103'), DATE_SUB(CURDATE(), INTERVAL 10 DAY), 12, 'Turno de emergencia'),
+      ((SELECT id_practicante FROM practicantes WHERE dpi = '2521234560103'), DATE_SUB(CURDATE(), INTERVAL 2 DAY), 12, 'Medicina interna'),
+      ((SELECT id_practicante FROM practicantes WHERE dpi = '2522345670100'), DATE_SUB(CURDATE(), INTERVAL 25 DAY), 6, 'Curaciones y signos vitales'),
+      ((SELECT id_practicante FROM practicantes WHERE dpi = '2522345670100'), DATE_SUB(CURDATE(), INTERVAL 18 DAY), 6, 'Vacunación'),
+      ((SELECT id_practicante FROM practicantes WHERE dpi = '2522345670100'), DATE_SUB(CURDATE(), INTERVAL 11 DAY), 6, 'Atención en encamamiento'),
+      ((SELECT id_practicante FROM practicantes WHERE dpi = '2522345670100'), DATE_SUB(CURDATE(), INTERVAL 4 DAY), 6, 'Educación en salud a pacientes');
+    SELECT 'Practicantes de demostración cargados' AS resultado;
   END IF;
 END //
 DELIMITER ;

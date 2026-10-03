@@ -285,3 +285,22 @@ CREATE TABLE establecimientos (
 
 
 /*DROP DATABASE IF EXISTS salud_db;*/
+-- Bitácora de llamadas entre Salud y los otros módulos (saliente = Salud
+-- consulta a otro módulo; entrante = otro módulo consume un servicio de Salud).
+-- Los CUI se guardan enmascarados. El backend también la crea si no existe.
+CREATE TABLE IF NOT EXISTS bitacora_integraciones (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    fecha DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    direccion ENUM('saliente','entrante') NOT NULL,
+    modulo VARCHAR(30) NOT NULL,
+    operacion VARCHAR(120) NOT NULL,
+    metodo VARCHAR(10) NOT NULL,
+    ruta VARCHAR(255) NOT NULL,
+    estado_http INT,
+    resultado VARCHAR(30) NOT NULL,
+    duracion_ms INT,
+    simulado BOOLEAN NOT NULL DEFAULT FALSE,
+    usuario VARCHAR(100),
+    detalle VARCHAR(255),
+    INDEX idx_bitacora_fecha (fecha)
+);
