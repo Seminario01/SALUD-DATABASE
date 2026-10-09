@@ -38,6 +38,12 @@ CREATE TABLE citas_medicas (
     costo DECIMAL(10,2),
     pago_confirmado BOOLEAN DEFAULT FALSE,
     fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+    -- Cobro en Tributario (obligación de pago)
+    numero_referencia VARCHAR(20) NULL UNIQUE,  -- SAL-AAAA-NNNNNN, lo genera Salud
+    estado_cobro VARCHAR(20) NULL,              -- PENDIENTE, PAGADO, ANULADO
+    fecha_vencimiento DATE NULL,
+    numero_autorizacion VARCHAR(60) NULL,
+    fecha_pago DATETIME NULL,
     FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
 );
 
