@@ -211,16 +211,58 @@ CREATE TABLE historial_medico (
     FOREIGN KEY (id_medico) REFERENCES medicos(id_medico)
 );
 
+-- Censo de camas: una fila por cama. El total y las disponibles de cada área
+-- en recursos_hospitalarios se calculan desde aquí.
+CREATE TABLE camas (
+    id_cama INT AUTO_INCREMENT PRIMARY KEY,
+    codigo VARCHAR(20) NOT NULL UNIQUE,         -- GEN-01, PED-03, UCI-02
+    area VARCHAR(80) NOT NULL,                  -- Medicina general, Pediatría, Cuidados intensivos
+    recurso_id INT NULL,
+    estado VARCHAR(20) NOT NULL DEFAULT 'DISPONIBLE',   -- DISPONIBLE, OCUPADA, LIMPIEZA, MANTENIMIENTO
+    observacion VARCHAR(200) NULL,
+    actualizado DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (recurso_id) REFERENCES recursos_hospitalarios(id)
+);
+
+-- PENDIENTE (orden del médico) -> ACTIVO (Enfermería asignó cama) -> EGRESADO; o ANULADO
 CREATE TABLE hospitalizaciones (
     id_hospitalizacion INT AUTO_INCREMENT PRIMARY KEY,
     id_paciente INT NOT NULL,
-    fecha_ingreso DATETIME NOT NULL,
+    fecha_ingreso DATETIME NOT NULL,            -- fecha de la orden de ingreso
     fecha_egreso DATETIME NULL,
-    sala VARCHAR(50),
-    cama VARCHAR(20),
+    sala VARCHAR(50),                           -- área
+    cama VARCHAR(20),                           -- código de la cama
+    cama_id INT NULL,
     diagnostico TEXT,
-    estado VARCHAR(20) DEFAULT 'ACTIVO',
-    FOREIGN KEY (id_paciente) REFERENCES pacientes(id)
+    indicaciones TEXT NULL,
+    estado VARCHAR(20) DEFAULT 'PENDIENTE',
+    expediente_id INT NULL,                     -- atención del expediente que originó el ingreso
+    medico_sub VARCHAR(36) NULL,
+    medico_nombre VARCHAR(150) NULL,
+    fecha_asignacion DATETIME NULL,             -- cuando se asignó la cama
+    asignado_por VARCHAR(100) NULL,
+    tipo_egreso VARCHAR(30) NULL,               -- ALTA, ALTA_VOLUNTARIA, TRASLADO, DEFUNCION
+    resumen_egreso TEXT NULL,
+    egresado_por VARCHAR(150) NULL,
+    motivo_anulacion VARCHAR(255) NULL,
+    FOREIGN KEY (id_paciente) REFERENCES pacientes(id),
+    FOREIGN KEY (cama_id) REFERENCES camas(id_cama)
+);
+
+-- Notas de evolución (médico) y de enfermería, con signos vitales
+CREATE TABLE notas_hospitalizacion (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    hospitalizacion_id INT NOT NULL,
+    fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+    autor_sub VARCHAR(36) NULL,
+    autor_nombre VARCHAR(150) NULL,
+    puesto VARCHAR(30) NULL,
+    nota TEXT NOT NULL,
+    presion VARCHAR(10) NULL,
+    temperatura DECIMAL(4,1) NULL,
+    frecuencia_cardiaca INT NULL,
+    saturacion INT NULL,
+    FOREIGN KEY (hospitalizacion_id) REFERENCES hospitalizaciones(id_hospitalizacion)
 );
 
 CREATE TABLE recetas (

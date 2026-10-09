@@ -198,6 +198,114 @@ BEGIN
     INSERT INTO detalle_receta (id_receta, id_medicamento, cantidad, dosis) VALUES (@receta, (SELECT id_medicamento FROM medicamentos WHERE codigo = 'MED-001'), 10, '1 tableta cada 8 horas si hay dolor');
     SELECT 'Farmacia de demostración cargada' AS resultado;
   END IF;
+
+  -- Hospitalización: censo de camas, pacientes ingresados, una orden pendiente y egresos
+  IF (SELECT COUNT(*) FROM camas) = 0
+     AND (SELECT COUNT(*) FROM pacientes WHERE cui = '2501123450102') > 0 THEN
+    INSERT INTO recursos_hospitalarios (tipo, descripcion, disponible, total) SELECT 'cama', 'Camas área general', 0, 0 FROM DUAL
+      WHERE NOT EXISTS (SELECT 1 FROM recursos_hospitalarios WHERE tipo = 'cama' AND descripcion = 'Camas área general');
+    SET @recurso = (SELECT MIN(id) FROM recursos_hospitalarios WHERE tipo = 'cama' AND descripcion = 'Camas área general');
+    INSERT INTO camas (codigo, area, recurso_id, estado) VALUES
+      ('GEN-01', 'Medicina general', @recurso, 'DISPONIBLE'),
+      ('GEN-02', 'Medicina general', @recurso, 'DISPONIBLE'),
+      ('GEN-03', 'Medicina general', @recurso, 'DISPONIBLE'),
+      ('GEN-04', 'Medicina general', @recurso, 'DISPONIBLE'),
+      ('GEN-05', 'Medicina general', @recurso, 'DISPONIBLE'),
+      ('GEN-06', 'Medicina general', @recurso, 'DISPONIBLE'),
+      ('GEN-07', 'Medicina general', @recurso, 'DISPONIBLE'),
+      ('GEN-08', 'Medicina general', @recurso, 'DISPONIBLE'),
+      ('GEN-09', 'Medicina general', @recurso, 'DISPONIBLE'),
+      ('GEN-10', 'Medicina general', @recurso, 'DISPONIBLE'),
+      ('GEN-11', 'Medicina general', @recurso, 'DISPONIBLE'),
+      ('GEN-12', 'Medicina general', @recurso, 'DISPONIBLE'),
+      ('GEN-13', 'Medicina general', @recurso, 'DISPONIBLE'),
+      ('GEN-14', 'Medicina general', @recurso, 'DISPONIBLE'),
+      ('GEN-15', 'Medicina general', @recurso, 'DISPONIBLE'),
+      ('GEN-16', 'Medicina general', @recurso, 'DISPONIBLE'),
+      ('GEN-17', 'Medicina general', @recurso, 'DISPONIBLE'),
+      ('GEN-18', 'Medicina general', @recurso, 'DISPONIBLE'),
+      ('GEN-19', 'Medicina general', @recurso, 'DISPONIBLE'),
+      ('GEN-20', 'Medicina general', @recurso, 'DISPONIBLE');
+    INSERT INTO recursos_hospitalarios (tipo, descripcion, disponible, total) SELECT 'cama', 'Camas de pediatría', 0, 0 FROM DUAL
+      WHERE NOT EXISTS (SELECT 1 FROM recursos_hospitalarios WHERE tipo = 'cama' AND descripcion = 'Camas de pediatría');
+    SET @recurso = (SELECT MIN(id) FROM recursos_hospitalarios WHERE tipo = 'cama' AND descripcion = 'Camas de pediatría');
+    INSERT INTO camas (codigo, area, recurso_id, estado) VALUES
+      ('PED-01', 'Pediatría', @recurso, 'DISPONIBLE'),
+      ('PED-02', 'Pediatría', @recurso, 'DISPONIBLE'),
+      ('PED-03', 'Pediatría', @recurso, 'DISPONIBLE'),
+      ('PED-04', 'Pediatría', @recurso, 'DISPONIBLE'),
+      ('PED-05', 'Pediatría', @recurso, 'DISPONIBLE'),
+      ('PED-06', 'Pediatría', @recurso, 'DISPONIBLE'),
+      ('PED-07', 'Pediatría', @recurso, 'DISPONIBLE'),
+      ('PED-08', 'Pediatría', @recurso, 'DISPONIBLE'),
+      ('PED-09', 'Pediatría', @recurso, 'DISPONIBLE'),
+      ('PED-10', 'Pediatría', @recurso, 'DISPONIBLE'),
+      ('PED-11', 'Pediatría', @recurso, 'DISPONIBLE'),
+      ('PED-12', 'Pediatría', @recurso, 'DISPONIBLE');
+    INSERT INTO recursos_hospitalarios (tipo, descripcion, disponible, total) SELECT 'cama', 'Camas de cuidados intensivos', 0, 0 FROM DUAL
+      WHERE NOT EXISTS (SELECT 1 FROM recursos_hospitalarios WHERE tipo = 'cama' AND descripcion = 'Camas de cuidados intensivos');
+    SET @recurso = (SELECT MIN(id) FROM recursos_hospitalarios WHERE tipo = 'cama' AND descripcion = 'Camas de cuidados intensivos');
+    INSERT INTO camas (codigo, area, recurso_id, estado) VALUES
+      ('UCI-01', 'Cuidados intensivos', @recurso, 'DISPONIBLE'),
+      ('UCI-02', 'Cuidados intensivos', @recurso, 'DISPONIBLE'),
+      ('UCI-03', 'Cuidados intensivos', @recurso, 'DISPONIBLE'),
+      ('UCI-04', 'Cuidados intensivos', @recurso, 'DISPONIBLE'),
+      ('UCI-05', 'Cuidados intensivos', @recurso, 'DISPONIBLE'),
+      ('UCI-06', 'Cuidados intensivos', @recurso, 'DISPONIBLE');
+    UPDATE camas SET estado = 'LIMPIEZA' WHERE codigo = 'GEN-15';
+    UPDATE camas SET estado = 'MANTENIMIENTO', observacion = 'Monitor de signos vitales en reparación' WHERE codigo = 'UCI-04';
+    INSERT INTO hospitalizaciones (id_paciente, fecha_ingreso, fecha_asignacion, fecha_egreso, sala, cama, cama_id, diagnostico, indicaciones, estado, expediente_id, medico_nombre, asignado_por, tipo_egreso, resumen_egreso, egresado_por) VALUES
+      ((SELECT id FROM pacientes WHERE cui = '2507890120103'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -3 DAY), '07:40:00'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -3 DAY), '08:30:00'), NULL, 'Medicina general', 'GEN-03', (SELECT id_cama FROM camas WHERE codigo = 'GEN-03'), 'Diabetes mellitus tipo 2 descompensada (hiperglucemia)', 'Insulina según glucometría cada 6 h; dieta para diabético; control de signos cada 4 h.', 'ACTIVO', (SELECT e.id FROM expedientes_clinicos e JOIN pacientes p ON p.id = e.paciente_id WHERE p.cui = '2507890120103' AND e.diagnostico = 'Diabetes mellitus tipo 2 en control' ORDER BY e.id LIMIT 1), 'Ana Lopez', 'Marta Ramírez', NULL, NULL, NULL);
+    UPDATE camas SET estado = 'OCUPADA' WHERE codigo = 'GEN-03';
+    SET @hosp = LAST_INSERT_ID();
+    INSERT INTO notas_hospitalizacion (hospitalizacion_id, fecha, autor_nombre, puesto, nota, presion, temperatura, frecuencia_cardiaca, saturacion) VALUES
+      (@hosp, TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -3 DAY), '09:00:00'), 'Ana Lopez', 'Médico', 'Glucemia de 412 mg/dl al ingreso. Inicia esquema de insulina.', '140/90', 37.0, 96, 96),
+      (@hosp, TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -2 DAY), '08:00:00'), 'Marta Ramírez', 'Enfermería', 'Glucometrías de 280, 245 y 210 mg/dl. Tolera la dieta.', '130/85', 36.8, 88, 97),
+      (@hosp, TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -1 DAY), '08:10:00'), 'Ana Lopez', 'Médico', 'Glucemia en ayunas de 168 mg/dl. Evolución favorable; se planifica egreso en 48 h.', '125/80', 36.6, 80, 98);
+    INSERT INTO hospitalizaciones (id_paciente, fecha_ingreso, fecha_asignacion, fecha_egreso, sala, cama, cama_id, diagnostico, indicaciones, estado, expediente_id, medico_nombre, asignado_por, tipo_egreso, resumen_egreso, egresado_por) VALUES
+      ((SELECT id FROM pacientes WHERE cui = '2518901230103'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -2 DAY), '09:15:00'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -2 DAY), '09:50:00'), NULL, 'Medicina general', 'GEN-07', (SELECT id_cama FROM camas WHERE codigo = 'GEN-07'), 'Neumonía adquirida en la comunidad', 'Ceftriaxona 1 g IV cada 24 h; oxígeno si SpO2 < 92 %; nebulizaciones cada 6 h.', 'ACTIVO', NULL, 'Ana Lopez', 'Marta Ramírez', NULL, NULL, NULL);
+    UPDATE camas SET estado = 'OCUPADA' WHERE codigo = 'GEN-07';
+    SET @hosp = LAST_INSERT_ID();
+    INSERT INTO notas_hospitalizacion (hospitalizacion_id, fecha, autor_nombre, puesto, nota, presion, temperatura, frecuencia_cardiaca, saturacion) VALUES
+      (@hosp, TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -2 DAY), '10:00:00'), 'Ana Lopez', 'Médico', 'Crepitantes en base pulmonar derecha; SpO2 de 89 % al aire, se inicia oxígeno por cánula nasal.', '110/70', 38.6, 104, 91),
+      (@hosp, TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -1 DAY), '07:30:00'), 'Marta Ramírez', 'Enfermería', 'Afebril durante la noche. Oxígeno a 2 L/min.', '115/70', 37.4, 92, 94),
+      (@hosp, DATE_SUB(NOW(), INTERVAL 3 HOUR), 'Ana Lopez', 'Médico', 'Mejor mecánica ventilatoria; se reduce el oxígeno a 1 L/min.', '120/75', 36.9, 86, 95);
+    INSERT INTO hospitalizaciones (id_paciente, fecha_ingreso, fecha_asignacion, fecha_egreso, sala, cama, cama_id, diagnostico, indicaciones, estado, expediente_id, medico_nombre, asignado_por, tipo_egreso, resumen_egreso, egresado_por) VALUES
+      ((SELECT id FROM pacientes WHERE cui = '2505678900101'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -1 DAY), '14:20:00'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -1 DAY), '14:55:00'), NULL, 'Medicina general', 'GEN-12', (SELECT id_cama FROM camas WHERE codigo = 'GEN-12'), 'Pielonefritis aguda', 'Hidratación IV; ciprofloxacina 400 mg IV cada 12 h; urocultivo.', 'ACTIVO', NULL, 'Ana Lopez', 'Marta Ramírez', NULL, NULL, NULL);
+    UPDATE camas SET estado = 'OCUPADA' WHERE codigo = 'GEN-12';
+    SET @hosp = LAST_INSERT_ID();
+    INSERT INTO notas_hospitalizacion (hospitalizacion_id, fecha, autor_nombre, puesto, nota, presion, temperatura, frecuencia_cardiaca, saturacion) VALUES
+      (@hosp, TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -1 DAY), '15:00:00'), 'Marta Ramírez', 'Enfermería', 'Ingresa con fiebre y dolor lumbar derecho. Se canaliza vía periférica.', '118/76', 38.9, 108, 97);
+    INSERT INTO hospitalizaciones (id_paciente, fecha_ingreso, fecha_asignacion, fecha_egreso, sala, cama, cama_id, diagnostico, indicaciones, estado, expediente_id, medico_nombre, asignado_por, tipo_egreso, resumen_egreso, egresado_por) VALUES
+      ((SELECT id FROM pacientes WHERE cui = '2514567890104'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -1 DAY), '11:00:00'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -1 DAY), '16:40:00'), NULL, 'Pediatría', 'PED-02', (SELECT id_cama FROM camas WHERE codigo = 'PED-02'), 'Apendicitis aguda, postoperatorio de apendicectomía', 'Analgesia; ayuno por 12 h y luego dieta líquida; curación de la herida cada 24 h.', 'ACTIVO', NULL, 'Ana Lopez', 'Marta Ramírez', NULL, NULL, NULL);
+    UPDATE camas SET estado = 'OCUPADA' WHERE codigo = 'PED-02';
+    SET @hosp = LAST_INSERT_ID();
+    INSERT INTO notas_hospitalizacion (hospitalizacion_id, fecha, autor_nombre, puesto, nota, presion, temperatura, frecuencia_cardiaca, saturacion) VALUES
+      (@hosp, TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -1 DAY), '18:00:00'), 'Marta Ramírez', 'Enfermería', 'Postoperatorio inmediato sin complicaciones; dolor 4/10.', '105/65', 37.2, 96, 98);
+    INSERT INTO hospitalizaciones (id_paciente, fecha_ingreso, fecha_asignacion, fecha_egreso, sala, cama, cama_id, diagnostico, indicaciones, estado, expediente_id, medico_nombre, asignado_por, tipo_egreso, resumen_egreso, egresado_por) VALUES
+      ((SELECT id FROM pacientes WHERE cui = '2513456780101'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -2 DAY), '21:30:00'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -2 DAY), '21:45:00'), NULL, 'Cuidados intensivos', 'UCI-01', (SELECT id_cama FROM camas WHERE codigo = 'UCI-01'), 'Síndrome coronario agudo en observación', 'Monitoreo cardiaco continuo; ácido acetilsalicílico; reposo absoluto.', 'ACTIVO', NULL, 'Ana Lopez', 'Marta Ramírez', NULL, NULL, NULL);
+    UPDATE camas SET estado = 'OCUPADA' WHERE codigo = 'UCI-01';
+    SET @hosp = LAST_INSERT_ID();
+    INSERT INTO notas_hospitalizacion (hospitalizacion_id, fecha, autor_nombre, puesto, nota, presion, temperatura, frecuencia_cardiaca, saturacion) VALUES
+      (@hosp, TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -2 DAY), '22:00:00'), 'Ana Lopez', 'Médico', 'Dolor torácico opresivo con troponina elevada. Se coordina cateterismo con Hospital Roosevelt si se requiere.', '150/95', 36.7, 98, 95),
+      (@hosp, TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -1 DAY), '06:00:00'), 'Marta Ramírez', 'Enfermería', 'Sin dolor torácico; ritmo sinusal en el monitor.', '135/85', 36.6, 76, 97);
+    INSERT INTO hospitalizaciones (id_paciente, fecha_ingreso, fecha_asignacion, fecha_egreso, sala, cama, cama_id, diagnostico, indicaciones, estado, expediente_id, medico_nombre, asignado_por, tipo_egreso, resumen_egreso, egresado_por) VALUES
+      ((SELECT id FROM pacientes WHERE cui = '2503456780107'), DATE_SUB(NOW(), INTERVAL 50 MINUTE), NULL, NULL, 'Medicina general', NULL, NULL, 'Dolor abdominal agudo en estudio', 'Ayuno; hidratación IV; ultrasonido abdominal.', 'PENDIENTE', NULL, 'Ana Lopez', NULL, NULL, NULL, NULL);
+    INSERT INTO hospitalizaciones (id_paciente, fecha_ingreso, fecha_asignacion, fecha_egreso, sala, cama, cama_id, diagnostico, indicaciones, estado, expediente_id, medico_nombre, asignado_por, tipo_egreso, resumen_egreso, egresado_por) VALUES
+      ((SELECT id FROM pacientes WHERE cui = '2504567890106'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -12 DAY), '10:00:00'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -12 DAY), '10:30:00'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -10 DAY), '11:00:00'), 'Pediatría', 'PED-04', (SELECT id_cama FROM camas WHERE codigo = 'PED-04'), 'Gastroenteritis aguda con deshidratación moderada', 'Hidratación IV; sales de rehidratación oral.', 'EGRESADO', NULL, 'Ana Lopez', 'Marta Ramírez', 'ALTA', 'Tolera la vía oral y está hidratada. Sales de rehidratación en casa; control en 3 días.', 'Ana Lopez');
+    INSERT INTO hospitalizaciones (id_paciente, fecha_ingreso, fecha_asignacion, fecha_egreso, sala, cama, cama_id, diagnostico, indicaciones, estado, expediente_id, medico_nombre, asignado_por, tipo_egreso, resumen_egreso, egresado_por) VALUES
+      ((SELECT id FROM pacientes WHERE cui = '2510123450103'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -20 DAY), '08:00:00'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -20 DAY), '08:45:00'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -16 DAY), '12:00:00'), 'Medicina general', 'GEN-05', (SELECT id_cama FROM camas WHERE codigo = 'GEN-05'), 'Colecistitis aguda', 'Ayuno; antibiótico IV; colecistectomía programada.', 'EGRESADO', NULL, 'Ana Lopez', 'Marta Ramírez', 'ALTA', 'Colecistectomía laparoscópica sin complicaciones. Retiro de puntos en 10 días.', 'Ana Lopez');
+    INSERT INTO hospitalizaciones (id_paciente, fecha_ingreso, fecha_asignacion, fecha_egreso, sala, cama, cama_id, diagnostico, indicaciones, estado, expediente_id, medico_nombre, asignado_por, tipo_egreso, resumen_egreso, egresado_por) VALUES
+      ((SELECT id FROM pacientes WHERE cui = '2519012340101'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -8 DAY), '19:10:00'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -8 DAY), '19:30:00'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -7 DAY), '09:00:00'), 'Medicina general', 'GEN-09', (SELECT id_cama FROM camas WHERE codigo = 'GEN-09'), 'Fractura de tibia derecha', 'Inmovilización; analgesia IV.', 'EGRESADO', NULL, 'Ana Lopez', 'Marta Ramírez', 'TRASLADO', 'Trasladado a Hospital Roosevelt para manejo por traumatología.', 'Ana Lopez');
+    UPDATE recursos_hospitalarios r SET
+      total = (SELECT COUNT(*) FROM camas c WHERE c.recurso_id = r.id),
+      disponible = (SELECT COUNT(*) FROM camas c WHERE c.recurso_id = r.id AND c.estado = 'DISPONIBLE')
+      WHERE r.tipo = 'cama' AND r.id IN (SELECT DISTINCT recurso_id FROM camas);
+    -- Categorías de camas repetidas (sin censo) se quitan para que los totales no se dupliquen
+    DELETE FROM recursos_hospitalarios WHERE tipo = 'cama' AND descripcion IN ('Camas área general', 'Camas de pediatría', 'Camas de cuidados intensivos')
+      AND id NOT IN (SELECT DISTINCT recurso_id FROM camas);
+    SELECT 'Hospitalización de demostración cargada' AS resultado;
+  END IF;
 END //
 DELIMITER ;
 
