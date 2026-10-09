@@ -145,6 +145,59 @@ BEGIN
       ((SELECT id_practicante FROM practicantes WHERE dpi = '2522345670100'), DATE_SUB(CURDATE(), INTERVAL 4 DAY), 6, 'Educación en salud a pacientes');
     SELECT 'Practicantes de demostración cargados' AS resultado;
   END IF;
+
+  -- Farmacia: catálogo, inventario y recetas ligadas a las atenciones del expediente
+  IF (SELECT COUNT(*) FROM medicamentos WHERE codigo = 'MED-001') = 0
+     AND (SELECT COUNT(*) FROM pacientes WHERE cui = '2501123450102') > 0 THEN
+    INSERT INTO medicamentos (codigo, nombre, presentacion, existencia, stock_minimo, precio) VALUES
+      ('MED-001', 'Acetaminofén', 'Tableta 500 mg', 850, 200, 0.25),
+      ('MED-002', 'Ibuprofeno', 'Tableta 400 mg', 420, 150, 0.40),
+      ('MED-003', 'Amoxicilina', 'Cápsula 500 mg', 300, 120, 1.10),
+      ('MED-004', 'Amoxicilina', 'Suspensión 250 mg/5 ml, frasco 120 ml', 18, 25, 22.00),
+      ('MED-005', 'Losartán', 'Tableta 50 mg', 540, 180, 0.85),
+      ('MED-006', 'Metformina', 'Tableta 850 mg', 610, 200, 0.60),
+      ('MED-007', 'Naproxeno', 'Tableta 550 mg', 6, 40, 1.25),
+      ('MED-008', 'Dicloxacilina', 'Cápsula 500 mg', 140, 60, 1.90),
+      ('MED-009', 'Omeprazol', 'Cápsula 20 mg', 380, 120, 0.55),
+      ('MED-010', 'Loratadina', 'Tableta 10 mg', 260, 80, 0.70),
+      ('MED-011', 'Salbutamol', 'Inhalador 100 mcg/dosis', 12, 15, 35.00),
+      ('MED-012', 'Sales de rehidratación oral', 'Sobre 27.9 g', 95, 100, 3.50),
+      ('MED-013', 'Enalapril', 'Tableta 10 mg', 300, 100, 0.45),
+      ('MED-014', 'Sulfato ferroso', 'Tableta 300 mg', 450, 150, 0.30),
+      ('MED-015', 'Ácido fólico', 'Tableta 5 mg', 500, 150, 0.20);
+    INSERT INTO movimientos_inventario (id_medicamento, tipo_movimiento, cantidad, fecha, observacion, usuario)
+      SELECT id_medicamento, 'ENTRADA', existencia + CASE codigo WHEN 'MED-005' THEN 30 WHEN 'MED-002' THEN 15 WHEN 'MED-006' THEN 60 WHEN 'MED-003' THEN 30 WHEN 'MED-001' THEN 10 ELSE 0 END,
+             DATE_SUB(NOW(), INTERVAL 35 DAY), 'Inventario inicial', 'farmacia1' FROM medicamentos WHERE codigo LIKE 'MED-0%';
+    INSERT INTO recetas (id_paciente, medico_nombre, expediente_id, fecha, indicaciones, estado, fecha_despacho) VALUES ((SELECT id FROM pacientes WHERE cui = '2501123450102'), 'Ana Lopez', (SELECT e.id FROM expedientes_clinicos e JOIN pacientes p ON p.id = e.paciente_id WHERE p.cui = '2501123450102' AND e.diagnostico = 'Hipertensión arterial estadio 1' ORDER BY e.id LIMIT 1), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -28 DAY), '10:30:00'), 'Tomar por la mañana. Control de presión en 4 semanas.', 'DESPACHADA', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -28 DAY), '11:15:00'));
+    SET @receta = LAST_INSERT_ID();
+    INSERT INTO detalle_receta (id_receta, id_medicamento, cantidad, dosis) VALUES (@receta, (SELECT id_medicamento FROM medicamentos WHERE codigo = 'MED-005'), 30, '1 tableta cada 24 horas');
+    INSERT INTO movimientos_inventario (id_medicamento, tipo_movimiento, cantidad, fecha, observacion, receta_id, usuario) VALUES ((SELECT id_medicamento FROM medicamentos WHERE codigo = 'MED-005'), 'SALIDA', -30, TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -28 DAY), '11:15:00'), CONCAT('Despacho de la receta ', @receta), @receta, 'farmacia1');
+    INSERT INTO recetas (id_paciente, medico_nombre, expediente_id, fecha, indicaciones, estado, fecha_despacho) VALUES ((SELECT id FROM pacientes WHERE cui = '2505678900101'), 'Ana Lopez', (SELECT e.id FROM expedientes_clinicos e JOIN pacientes p ON p.id = e.paciente_id WHERE p.cui = '2505678900101' AND e.diagnostico = 'Lumbalgia mecánica' ORDER BY e.id LIMIT 1), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -21 DAY), '10:30:00'), 'Tomar con alimentos.', 'DESPACHADA', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -21 DAY), '11:15:00'));
+    SET @receta = LAST_INSERT_ID();
+    INSERT INTO detalle_receta (id_receta, id_medicamento, cantidad, dosis) VALUES (@receta, (SELECT id_medicamento FROM medicamentos WHERE codigo = 'MED-002'), 15, '1 tableta cada 8 horas por 5 días');
+    INSERT INTO movimientos_inventario (id_medicamento, tipo_movimiento, cantidad, fecha, observacion, receta_id, usuario) VALUES ((SELECT id_medicamento FROM medicamentos WHERE codigo = 'MED-002'), 'SALIDA', -15, TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -21 DAY), '11:15:00'), CONCAT('Despacho de la receta ', @receta), @receta, 'farmacia1');
+    INSERT INTO recetas (id_paciente, medico_nombre, expediente_id, fecha, indicaciones, estado, fecha_despacho) VALUES ((SELECT id FROM pacientes WHERE cui = '2507890120103'), 'Ana Lopez', (SELECT e.id FROM expedientes_clinicos e JOIN pacientes p ON p.id = e.paciente_id WHERE p.cui = '2507890120103' AND e.diagnostico = 'Diabetes mellitus tipo 2 en control' ORDER BY e.id LIMIT 1), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -14 DAY), '10:30:00'), 'No suspender el tratamiento.', 'DESPACHADA', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -14 DAY), '11:15:00'));
+    SET @receta = LAST_INSERT_ID();
+    INSERT INTO detalle_receta (id_receta, id_medicamento, cantidad, dosis) VALUES (@receta, (SELECT id_medicamento FROM medicamentos WHERE codigo = 'MED-006'), 60, '1 tableta cada 12 horas con las comidas');
+    INSERT INTO movimientos_inventario (id_medicamento, tipo_movimiento, cantidad, fecha, observacion, receta_id, usuario) VALUES ((SELECT id_medicamento FROM medicamentos WHERE codigo = 'MED-006'), 'SALIDA', -60, TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -14 DAY), '11:15:00'), CONCAT('Despacho de la receta ', @receta), @receta, 'farmacia1');
+    INSERT INTO recetas (id_paciente, medico_nombre, expediente_id, fecha, indicaciones, estado, fecha_despacho) VALUES ((SELECT id FROM pacientes WHERE cui = '2502345670104'), 'Ana Lopez', (SELECT e.id FROM expedientes_clinicos e JOIN pacientes p ON p.id = e.paciente_id WHERE p.cui = '2502345670104' AND e.diagnostico = 'Faringoamigdalitis bacteriana' ORDER BY e.id LIMIT 1), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -10 DAY), '10:30:00'), 'Completar los 10 días aunque desaparezcan los síntomas.', 'DESPACHADA', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -10 DAY), '11:15:00'));
+    SET @receta = LAST_INSERT_ID();
+    INSERT INTO detalle_receta (id_receta, id_medicamento, cantidad, dosis) VALUES (@receta, (SELECT id_medicamento FROM medicamentos WHERE codigo = 'MED-003'), 30, '1 cápsula cada 8 horas por 10 días');
+    INSERT INTO movimientos_inventario (id_medicamento, tipo_movimiento, cantidad, fecha, observacion, receta_id, usuario) VALUES ((SELECT id_medicamento FROM medicamentos WHERE codigo = 'MED-003'), 'SALIDA', -30, TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -10 DAY), '11:15:00'), CONCAT('Despacho de la receta ', @receta), @receta, 'farmacia1');
+    INSERT INTO detalle_receta (id_receta, id_medicamento, cantidad, dosis) VALUES (@receta, (SELECT id_medicamento FROM medicamentos WHERE codigo = 'MED-001'), 10, '1 tableta cada 8 horas si hay fiebre');
+    INSERT INTO movimientos_inventario (id_medicamento, tipo_movimiento, cantidad, fecha, observacion, receta_id, usuario) VALUES ((SELECT id_medicamento FROM medicamentos WHERE codigo = 'MED-001'), 'SALIDA', -10, TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -10 DAY), '11:15:00'), CONCAT('Despacho de la receta ', @receta), @receta, 'farmacia1');
+    INSERT INTO recetas (id_paciente, medico_nombre, expediente_id, fecha, indicaciones, estado, fecha_despacho) VALUES ((SELECT id FROM pacientes WHERE cui = '2516789010105'), 'Ana Lopez', (SELECT e.id FROM expedientes_clinicos e JOIN pacientes p ON p.id = e.paciente_id WHERE p.cui = '2516789010105' AND e.diagnostico = 'Migraña sin aura' ORDER BY e.id LIMIT 1), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -5 DAY), '10:30:00'), 'Tomar al inicio de la crisis. Llevar diario de cefaleas.', 'PENDIENTE', NULL);
+    SET @receta = LAST_INSERT_ID();
+    INSERT INTO detalle_receta (id_receta, id_medicamento, cantidad, dosis) VALUES (@receta, (SELECT id_medicamento FROM medicamentos WHERE codigo = 'MED-007'), 10, '1 tableta en crisis, máximo 2 al día');
+    INSERT INTO recetas (id_paciente, medico_nombre, expediente_id, fecha, indicaciones, estado, fecha_despacho) VALUES ((SELECT id FROM pacientes WHERE cui = '2518901230103'), 'Ana Lopez', (SELECT e.id FROM expedientes_clinicos e JOIN pacientes p ON p.id = e.paciente_id WHERE p.cui = '2518901230103' AND e.diagnostico = 'Osteoartritis de rodilla' ORDER BY e.id LIMIT 1), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -3 DAY), '10:30:00'), 'No exceder 3 tabletas al día.', 'PENDIENTE', NULL);
+    SET @receta = LAST_INSERT_ID();
+    INSERT INTO detalle_receta (id_receta, id_medicamento, cantidad, dosis) VALUES (@receta, (SELECT id_medicamento FROM medicamentos WHERE codigo = 'MED-001'), 30, '1 tableta cada 8 horas por 10 días');
+    INSERT INTO recetas (id_paciente, medico_nombre, expediente_id, fecha, indicaciones, estado, fecha_despacho) VALUES ((SELECT id FROM pacientes WHERE cui = '2501234560109'), 'Ana Lopez', (SELECT e.id FROM expedientes_clinicos e JOIN pacientes p ON p.id = e.paciente_id WHERE p.cui = '2501234560109' AND e.diagnostico = 'Herida cortante en antebrazo izquierdo' ORDER BY e.id LIMIT 1), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -1 DAY), '10:30:00'), 'Curación diaria. Retiro de puntos en 7 días.', 'PENDIENTE', NULL);
+    SET @receta = LAST_INSERT_ID();
+    INSERT INTO detalle_receta (id_receta, id_medicamento, cantidad, dosis) VALUES (@receta, (SELECT id_medicamento FROM medicamentos WHERE codigo = 'MED-008'), 28, '1 cápsula cada 6 horas por 7 días');
+    INSERT INTO detalle_receta (id_receta, id_medicamento, cantidad, dosis) VALUES (@receta, (SELECT id_medicamento FROM medicamentos WHERE codigo = 'MED-001'), 10, '1 tableta cada 8 horas si hay dolor');
+    SELECT 'Farmacia de demostración cargada' AS resultado;
+  END IF;
 END //
 DELIMITER ;
 

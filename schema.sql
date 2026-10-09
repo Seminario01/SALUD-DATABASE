@@ -130,6 +130,7 @@ CREATE TABLE medicamentos (
     id_medicamento INT AUTO_INCREMENT PRIMARY KEY,
     codigo VARCHAR(50) NOT NULL UNIQUE,
     nombre VARCHAR(100) NOT NULL,
+    presentacion VARCHAR(100),          -- "Tableta 500 mg", "Jarabe 120 ml"
     descripcion TEXT,
     existencia INT NOT NULL DEFAULT 0,
     stock_minimo INT DEFAULT 10,
@@ -225,8 +226,16 @@ CREATE TABLE hospitalizaciones (
 CREATE TABLE recetas (
     id_receta INT AUTO_INCREMENT PRIMARY KEY,
     id_paciente INT NOT NULL,
-    id_medico INT NOT NULL,
+    id_medico INT NULL,                 -- opcional: el médico se identifica por su sub
+    medico_sub VARCHAR(36) NULL,        -- sub del médico en el Login Único
+    medico_nombre VARCHAR(150) NULL,    -- nombre del médico que firma la receta
+    expediente_id INT NULL,             -- atención del expediente que originó la receta
     fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+    indicaciones TEXT,
+    estado VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE',   -- PENDIENTE, DESPACHADA, ANULADA
+    despachado_por VARCHAR(36) NULL,    -- sub de Farmacia
+    fecha_despacho DATETIME NULL,
+    motivo_anulacion VARCHAR(255) NULL,
     FOREIGN KEY (id_paciente) REFERENCES pacientes(id),
     FOREIGN KEY (id_medico) REFERENCES medicos(id_medico)
 );
@@ -240,6 +249,7 @@ CREATE TABLE detalle_receta (
     id_receta INT NOT NULL,
     id_medicamento INT NOT NULL,
     cantidad INT NOT NULL,
+    dosis VARCHAR(200),                 -- "1 tableta cada 8 horas por 5 días"
     FOREIGN KEY (id_receta) REFERENCES recetas(id_receta),
     FOREIGN KEY (id_medicamento) REFERENCES medicamentos(id_medicamento)
 );
@@ -270,6 +280,8 @@ CREATE TABLE movimientos_inventario (
     cantidad INT NOT NULL,
     fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
     observacion TEXT,
+    receta_id INT NULL,                 -- SALIDA por despacho de una receta
+    usuario VARCHAR(100) NULL,
     FOREIGN KEY (id_medicamento) REFERENCES medicamentos(id_medicamento)
 );
 
