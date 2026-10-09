@@ -163,9 +163,11 @@ CREATE TABLE practicantes (
 
 CREATE TABLE servicios (
     id_servicio INT AUTO_INCREMENT PRIMARY KEY,
+    codigo VARCHAR(20) NULL UNIQUE,             -- CAMA-GEN, LAB-001, IMG-002, PRO-003
     nombre VARCHAR(100) NOT NULL,
     descripcion TEXT,
-    costo DECIMAL(10,2) NOT NULL,
+    categoria VARCHAR(30) NULL,                 -- DIA_CAMA, LABORATORIO, IMAGEN, PROCEDIMIENTO
+    costo DECIMAL(10,2) NOT NULL,               -- tarifa en GTQ
     estado VARCHAR(20) DEFAULT 'ACTIVO'
 );
 
@@ -191,11 +193,26 @@ CREATE TABLE auditoria (
     fecha DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Cuenta del paciente: una por hospitalización, o ambulatoria.
+-- ABIERTA -> POR_COBRAR (obligación registrada en Tributario) -> PAGADA; o EXONERADA
 CREATE TABLE cuentas_paciente (
     id_cuenta INT AUTO_INCREMENT PRIMARY KEY,
     id_paciente INT NOT NULL,
     saldo DECIMAL(10,2) DEFAULT 0.00,
-    estado VARCHAR(20) DEFAULT 'ACTIVA',
+    estado VARCHAR(20) DEFAULT 'ABIERTA',
+    tipo VARCHAR(20) NOT NULL DEFAULT 'HOSPITALIZACION',   -- HOSPITALIZACION, AMBULATORIA
+    hospitalizacion_id INT NULL,
+    fecha_apertura DATETIME NULL,
+    fecha_cierre DATETIME NULL,
+    abierta_por VARCHAR(150) NULL,
+    cerrada_por VARCHAR(150) NULL,
+    tramo_inicio DATETIME NULL,                 -- día cama del área actual, aún sin cargar
+    tramo_area VARCHAR(80) NULL,
+    numero_referencia VARCHAR(20) NULL UNIQUE,  -- SAL-AAAA-NNNNNN (compartido con las citas)
+    estado_cobro VARCHAR(20) NULL,
+    fecha_vencimiento DATE NULL,
+    numero_autorizacion VARCHAR(60) NULL,
+    fecha_pago DATETIME NULL,
     FOREIGN KEY (id_paciente) REFERENCES pacientes(id)
 );
 
@@ -305,6 +322,7 @@ CREATE TABLE horas_practica (
     FOREIGN KEY (id_practicante) REFERENCES practicantes(id_practicante)
 );
 
+-- CARGO (día cama, medicamento, servicio), DESCUENTO o PAGO
 CREATE TABLE movimientos_cuenta (
     id_movimiento INT AUTO_INCREMENT PRIMARY KEY,
     id_cuenta INT NOT NULL,
@@ -312,6 +330,14 @@ CREATE TABLE movimientos_cuenta (
     monto DECIMAL(10,2) NOT NULL,
     descripcion TEXT,
     fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+    categoria VARCHAR(30) NULL,
+    servicio_id INT NULL,
+    cantidad INT NULL,
+    precio_unitario DECIMAL(10,2) NULL,
+    receta_id INT NULL,
+    usuario VARCHAR(150) NULL,
+    anulado TINYINT(1) NOT NULL DEFAULT 0,
+    motivo_anulacion VARCHAR(255) NULL,
     FOREIGN KEY (id_cuenta) REFERENCES cuentas_paciente(id_cuenta)
 );
 

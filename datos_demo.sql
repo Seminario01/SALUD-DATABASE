@@ -306,6 +306,225 @@ BEGIN
       AND id NOT IN (SELECT DISTINCT recurso_id FROM camas);
     SELECT 'Hospitalización de demostración cargada' AS resultado;
   END IF;
+
+  -- Caja: catálogo de servicios, medicamentos de uso hospitalario y cuentas de los pacientes
+  IF (SELECT COUNT(*) FROM cuentas_paciente) = 0 AND (SELECT COUNT(*) FROM camas) > 0
+     AND (SELECT COUNT(*) FROM pacientes WHERE cui = '2501123450102') > 0 THEN
+    INSERT INTO servicios (codigo, nombre, categoria, costo, estado) SELECT 'CAMA-GEN', 'Día cama — Medicina general', 'DIA_CAMA', 150.00, 'ACTIVO' FROM DUAL
+      WHERE NOT EXISTS (SELECT 1 FROM servicios WHERE codigo = 'CAMA-GEN');
+    INSERT INTO servicios (codigo, nombre, categoria, costo, estado) SELECT 'CAMA-PED', 'Día cama — Pediatría', 'DIA_CAMA', 150.00, 'ACTIVO' FROM DUAL
+      WHERE NOT EXISTS (SELECT 1 FROM servicios WHERE codigo = 'CAMA-PED');
+    INSERT INTO servicios (codigo, nombre, categoria, costo, estado) SELECT 'CAMA-UCI', 'Día cama — Cuidados intensivos', 'DIA_CAMA', 600.00, 'ACTIVO' FROM DUAL
+      WHERE NOT EXISTS (SELECT 1 FROM servicios WHERE codigo = 'CAMA-UCI');
+    INSERT INTO servicios (codigo, nombre, categoria, costo, estado) SELECT 'LAB-001', 'Hematología completa', 'LABORATORIO', 45.00, 'ACTIVO' FROM DUAL
+      WHERE NOT EXISTS (SELECT 1 FROM servicios WHERE codigo = 'LAB-001');
+    INSERT INTO servicios (codigo, nombre, categoria, costo, estado) SELECT 'LAB-002', 'Química sanguínea (glucosa, creatinina, BUN)', 'LABORATORIO', 60.00, 'ACTIVO' FROM DUAL
+      WHERE NOT EXISTS (SELECT 1 FROM servicios WHERE codigo = 'LAB-002');
+    INSERT INTO servicios (codigo, nombre, categoria, costo, estado) SELECT 'LAB-003', 'Examen general de orina', 'LABORATORIO', 30.00, 'ACTIVO' FROM DUAL
+      WHERE NOT EXISTS (SELECT 1 FROM servicios WHERE codigo = 'LAB-003');
+    INSERT INTO servicios (codigo, nombre, categoria, costo, estado) SELECT 'LAB-004', 'Urocultivo', 'LABORATORIO', 75.00, 'ACTIVO' FROM DUAL
+      WHERE NOT EXISTS (SELECT 1 FROM servicios WHERE codigo = 'LAB-004');
+    INSERT INTO servicios (codigo, nombre, categoria, costo, estado) SELECT 'LAB-005', 'Troponina I', 'LABORATORIO', 120.00, 'ACTIVO' FROM DUAL
+      WHERE NOT EXISTS (SELECT 1 FROM servicios WHERE codigo = 'LAB-005');
+    INSERT INTO servicios (codigo, nombre, categoria, costo, estado) SELECT 'LAB-006', 'Electrolitos séricos', 'LABORATORIO', 70.00, 'ACTIVO' FROM DUAL
+      WHERE NOT EXISTS (SELECT 1 FROM servicios WHERE codigo = 'LAB-006');
+    INSERT INTO servicios (codigo, nombre, categoria, costo, estado) SELECT 'LAB-007', 'Glucometría capilar', 'LABORATORIO', 10.00, 'ACTIVO' FROM DUAL
+      WHERE NOT EXISTS (SELECT 1 FROM servicios WHERE codigo = 'LAB-007');
+    INSERT INTO servicios (codigo, nombre, categoria, costo, estado) SELECT 'IMG-001', 'Rayos X de tórax', 'IMAGEN', 125.00, 'ACTIVO' FROM DUAL
+      WHERE NOT EXISTS (SELECT 1 FROM servicios WHERE codigo = 'IMG-001');
+    INSERT INTO servicios (codigo, nombre, categoria, costo, estado) SELECT 'IMG-002', 'Ultrasonido abdominal', 'IMAGEN', 250.00, 'ACTIVO' FROM DUAL
+      WHERE NOT EXISTS (SELECT 1 FROM servicios WHERE codigo = 'IMG-002');
+    INSERT INTO servicios (codigo, nombre, categoria, costo, estado) SELECT 'IMG-003', 'Electrocardiograma', 'IMAGEN', 90.00, 'ACTIVO' FROM DUAL
+      WHERE NOT EXISTS (SELECT 1 FROM servicios WHERE codigo = 'IMG-003');
+    INSERT INTO servicios (codigo, nombre, categoria, costo, estado) SELECT 'IMG-004', 'Rayos X de extremidad', 'IMAGEN', 110.00, 'ACTIVO' FROM DUAL
+      WHERE NOT EXISTS (SELECT 1 FROM servicios WHERE codigo = 'IMG-004');
+    INSERT INTO servicios (codigo, nombre, categoria, costo, estado) SELECT 'PRO-001', 'Curación de herida', 'PROCEDIMIENTO', 40.00, 'ACTIVO' FROM DUAL
+      WHERE NOT EXISTS (SELECT 1 FROM servicios WHERE codigo = 'PRO-001');
+    INSERT INTO servicios (codigo, nombre, categoria, costo, estado) SELECT 'PRO-002', 'Nebulización', 'PROCEDIMIENTO', 25.00, 'ACTIVO' FROM DUAL
+      WHERE NOT EXISTS (SELECT 1 FROM servicios WHERE codigo = 'PRO-002');
+    INSERT INTO servicios (codigo, nombre, categoria, costo, estado) SELECT 'PRO-003', 'Colocación de vía periférica', 'PROCEDIMIENTO', 35.00, 'ACTIVO' FROM DUAL
+      WHERE NOT EXISTS (SELECT 1 FROM servicios WHERE codigo = 'PRO-003');
+    INSERT INTO servicios (codigo, nombre, categoria, costo, estado) SELECT 'PRO-004', 'Apendicectomía (uso de sala de operaciones)', 'PROCEDIMIENTO', 1800.00, 'ACTIVO' FROM DUAL
+      WHERE NOT EXISTS (SELECT 1 FROM servicios WHERE codigo = 'PRO-004');
+    INSERT INTO servicios (codigo, nombre, categoria, costo, estado) SELECT 'PRO-005', 'Colecistectomía laparoscópica (uso de sala de operaciones)', 'PROCEDIMIENTO', 2200.00, 'ACTIVO' FROM DUAL
+      WHERE NOT EXISTS (SELECT 1 FROM servicios WHERE codigo = 'PRO-005');
+    INSERT INTO servicios (codigo, nombre, categoria, costo, estado) SELECT 'PRO-006', 'Inmovilización con férula', 'PROCEDIMIENTO', 150.00, 'ACTIVO' FROM DUAL
+      WHERE NOT EXISTS (SELECT 1 FROM servicios WHERE codigo = 'PRO-006');
+    IF (SELECT COUNT(*) FROM medicamentos WHERE codigo = 'MED-016') = 0 THEN
+      INSERT INTO medicamentos (codigo, nombre, presentacion, existencia, stock_minimo, precio) VALUES ('MED-016', 'Ceftriaxona', 'Vial 1 g', 120, 40, 18.00);
+      INSERT INTO movimientos_inventario (id_medicamento, tipo_movimiento, cantidad, fecha, observacion, usuario) VALUES (LAST_INSERT_ID(), 'ENTRADA', 120, DATE_SUB(NOW(), INTERVAL 20 DAY), 'Compra para encamamiento', 'farmacia1');
+    END IF;
+    IF (SELECT COUNT(*) FROM medicamentos WHERE codigo = 'MED-017') = 0 THEN
+      INSERT INTO medicamentos (codigo, nombre, presentacion, existencia, stock_minimo, precio) VALUES ('MED-017', 'Insulina NPH', 'Frasco 10 ml, 100 UI/ml', 25, 10, 95.00);
+      INSERT INTO movimientos_inventario (id_medicamento, tipo_movimiento, cantidad, fecha, observacion, usuario) VALUES (LAST_INSERT_ID(), 'ENTRADA', 25, DATE_SUB(NOW(), INTERVAL 20 DAY), 'Compra para encamamiento', 'farmacia1');
+    END IF;
+    IF (SELECT COUNT(*) FROM medicamentos WHERE codigo = 'MED-018') = 0 THEN
+      INSERT INTO medicamentos (codigo, nombre, presentacion, existencia, stock_minimo, precio) VALUES ('MED-018', 'Solución salina 0.9 %', 'Bolsa 1000 ml', 300, 100, 12.00);
+      INSERT INTO movimientos_inventario (id_medicamento, tipo_movimiento, cantidad, fecha, observacion, usuario) VALUES (LAST_INSERT_ID(), 'ENTRADA', 300, DATE_SUB(NOW(), INTERVAL 20 DAY), 'Compra para encamamiento', 'farmacia1');
+    END IF;
+    IF (SELECT COUNT(*) FROM medicamentos WHERE codigo = 'MED-019') = 0 THEN
+      INSERT INTO medicamentos (codigo, nombre, presentacion, existencia, stock_minimo, precio) VALUES ('MED-019', 'Ciprofloxacina', 'Bolsa IV 400 mg/200 ml', 60, 20, 45.00);
+      INSERT INTO movimientos_inventario (id_medicamento, tipo_movimiento, cantidad, fecha, observacion, usuario) VALUES (LAST_INSERT_ID(), 'ENTRADA', 60, DATE_SUB(NOW(), INTERVAL 20 DAY), 'Compra para encamamiento', 'farmacia1');
+    END IF;
+    IF (SELECT COUNT(*) FROM medicamentos WHERE codigo = 'MED-020') = 0 THEN
+      INSERT INTO medicamentos (codigo, nombre, presentacion, existencia, stock_minimo, precio) VALUES ('MED-020', 'Ácido acetilsalicílico', 'Tableta 100 mg', 600, 200, 0.15);
+      INSERT INTO movimientos_inventario (id_medicamento, tipo_movimiento, cantidad, fecha, observacion, usuario) VALUES (LAST_INSERT_ID(), 'ENTRADA', 600, DATE_SUB(NOW(), INTERVAL 20 DAY), 'Compra para encamamiento', 'farmacia1');
+    END IF;
+    SET @ref = (SELECT COALESCE(MAX(n), 0) FROM (
+      SELECT CAST(SUBSTRING(numero_referencia, 10) AS UNSIGNED) AS n FROM citas_medicas WHERE numero_referencia LIKE CONCAT('SAL-', YEAR(CURDATE()), '-%')
+      UNION ALL SELECT CAST(SUBSTRING(numero_referencia, 10) AS UNSIGNED) FROM cuentas_paciente WHERE numero_referencia LIKE CONCAT('SAL-', YEAR(CURDATE()), '-%')) r);
+    SET @hosp = (SELECT h.id_hospitalizacion FROM hospitalizaciones h JOIN pacientes p ON p.id = h.id_paciente WHERE p.cui = '2507890120103' AND h.estado = 'ACTIVO' ORDER BY h.id_hospitalizacion LIMIT 1);
+    IF @hosp IS NOT NULL THEN
+      INSERT INTO cuentas_paciente (id_paciente, saldo, estado, tipo, hospitalizacion_id, fecha_apertura, fecha_cierre, abierta_por, cerrada_por, tramo_inicio, tramo_area)
+        VALUES ((SELECT id FROM pacientes WHERE cui = '2507890120103'), 0, 'ABIERTA', 'HOSPITALIZACION', @hosp, (SELECT fecha_asignacion FROM hospitalizaciones WHERE id_hospitalizacion = @hosp), NULL, 'Marta Ramírez', NULL, (SELECT fecha_asignacion FROM hospitalizaciones WHERE id_hospitalizacion = @hosp), (SELECT sala FROM hospitalizaciones WHERE id_hospitalizacion = @hosp));
+      SET @cuenta = LAST_INSERT_ID();
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo * 1, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -3 DAY), '09:10:00'), id_servicio FROM servicios WHERE codigo = 'LAB-002';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo * 1, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -3 DAY), '09:10:00'), id_servicio FROM servicios WHERE codigo = 'LAB-006';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo * 1, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -3 DAY), '08:40:00'), id_servicio FROM servicios WHERE codigo = 'PRO-003';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 8, costo, costo * 8, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -2 DAY), '20:00:00'), id_servicio FROM servicios WHERE codigo = 'LAB-007';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha)
+        SELECT @cuenta, 'CARGO', 'MEDICAMENTO', CONCAT(nombre, ' — ', presentacion), 1, precio, precio * 1, 'Silvia Ordóñez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -3 DAY), '10:00:00') FROM medicamentos WHERE codigo = 'MED-017';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha)
+        SELECT @cuenta, 'CARGO', 'MEDICAMENTO', CONCAT(nombre, ' — ', presentacion), 3, precio, precio * 3, 'Silvia Ordóñez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -3 DAY), '10:00:00') FROM medicamentos WHERE codigo = 'MED-018';
+      UPDATE cuentas_paciente SET saldo = (SELECT COALESCE(SUM(CASE WHEN tipo_movimiento = 'CARGO' THEN monto ELSE -monto END), 0) FROM movimientos_cuenta WHERE id_cuenta = @cuenta AND anulado = 0) WHERE id_cuenta = @cuenta;
+    END IF;
+    SET @hosp = (SELECT h.id_hospitalizacion FROM hospitalizaciones h JOIN pacientes p ON p.id = h.id_paciente WHERE p.cui = '2518901230103' AND h.estado = 'ACTIVO' ORDER BY h.id_hospitalizacion LIMIT 1);
+    IF @hosp IS NOT NULL THEN
+      INSERT INTO cuentas_paciente (id_paciente, saldo, estado, tipo, hospitalizacion_id, fecha_apertura, fecha_cierre, abierta_por, cerrada_por, tramo_inicio, tramo_area)
+        VALUES ((SELECT id FROM pacientes WHERE cui = '2518901230103'), 0, 'ABIERTA', 'HOSPITALIZACION', @hosp, (SELECT fecha_asignacion FROM hospitalizaciones WHERE id_hospitalizacion = @hosp), NULL, 'Marta Ramírez', NULL, (SELECT fecha_asignacion FROM hospitalizaciones WHERE id_hospitalizacion = @hosp), (SELECT sala FROM hospitalizaciones WHERE id_hospitalizacion = @hosp));
+      SET @cuenta = LAST_INSERT_ID();
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo * 1, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -2 DAY), '10:20:00'), id_servicio FROM servicios WHERE codigo = 'LAB-001';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo * 1, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -2 DAY), '10:30:00'), id_servicio FROM servicios WHERE codigo = 'IMG-001';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 6, costo, costo * 6, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -1 DAY), '18:00:00'), id_servicio FROM servicios WHERE codigo = 'PRO-002';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha)
+        SELECT @cuenta, 'CARGO', 'MEDICAMENTO', CONCAT(nombre, ' — ', presentacion), 2, precio, precio * 2, 'Silvia Ordóñez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -2 DAY), '11:00:00') FROM medicamentos WHERE codigo = 'MED-016';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha)
+        SELECT @cuenta, 'CARGO', 'MEDICAMENTO', CONCAT(nombre, ' — ', presentacion), 2, precio, precio * 2, 'Silvia Ordóñez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -2 DAY), '11:00:00') FROM medicamentos WHERE codigo = 'MED-018';
+      UPDATE cuentas_paciente SET saldo = (SELECT COALESCE(SUM(CASE WHEN tipo_movimiento = 'CARGO' THEN monto ELSE -monto END), 0) FROM movimientos_cuenta WHERE id_cuenta = @cuenta AND anulado = 0) WHERE id_cuenta = @cuenta;
+    END IF;
+    SET @hosp = (SELECT h.id_hospitalizacion FROM hospitalizaciones h JOIN pacientes p ON p.id = h.id_paciente WHERE p.cui = '2505678900101' AND h.estado = 'ACTIVO' ORDER BY h.id_hospitalizacion LIMIT 1);
+    IF @hosp IS NOT NULL THEN
+      INSERT INTO cuentas_paciente (id_paciente, saldo, estado, tipo, hospitalizacion_id, fecha_apertura, fecha_cierre, abierta_por, cerrada_por, tramo_inicio, tramo_area)
+        VALUES ((SELECT id FROM pacientes WHERE cui = '2505678900101'), 0, 'ABIERTA', 'HOSPITALIZACION', @hosp, (SELECT fecha_asignacion FROM hospitalizaciones WHERE id_hospitalizacion = @hosp), NULL, 'Marta Ramírez', NULL, (SELECT fecha_asignacion FROM hospitalizaciones WHERE id_hospitalizacion = @hosp), (SELECT sala FROM hospitalizaciones WHERE id_hospitalizacion = @hosp));
+      SET @cuenta = LAST_INSERT_ID();
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo * 1, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -1 DAY), '15:10:00'), id_servicio FROM servicios WHERE codigo = 'LAB-001';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo * 1, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -1 DAY), '15:10:00'), id_servicio FROM servicios WHERE codigo = 'LAB-003';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo * 1, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -1 DAY), '15:10:00'), id_servicio FROM servicios WHERE codigo = 'LAB-004';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo * 1, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -1 DAY), '15:00:00'), id_servicio FROM servicios WHERE codigo = 'PRO-003';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha)
+        SELECT @cuenta, 'CARGO', 'MEDICAMENTO', CONCAT(nombre, ' — ', presentacion), 2, precio, precio * 2, 'Silvia Ordóñez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -1 DAY), '16:00:00') FROM medicamentos WHERE codigo = 'MED-019';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha)
+        SELECT @cuenta, 'CARGO', 'MEDICAMENTO', CONCAT(nombre, ' — ', presentacion), 2, precio, precio * 2, 'Silvia Ordóñez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -1 DAY), '16:00:00') FROM medicamentos WHERE codigo = 'MED-018';
+      UPDATE cuentas_paciente SET saldo = (SELECT COALESCE(SUM(CASE WHEN tipo_movimiento = 'CARGO' THEN monto ELSE -monto END), 0) FROM movimientos_cuenta WHERE id_cuenta = @cuenta AND anulado = 0) WHERE id_cuenta = @cuenta;
+    END IF;
+    SET @hosp = (SELECT h.id_hospitalizacion FROM hospitalizaciones h JOIN pacientes p ON p.id = h.id_paciente WHERE p.cui = '2514567890104' AND h.estado = 'ACTIVO' ORDER BY h.id_hospitalizacion LIMIT 1);
+    IF @hosp IS NOT NULL THEN
+      INSERT INTO cuentas_paciente (id_paciente, saldo, estado, tipo, hospitalizacion_id, fecha_apertura, fecha_cierre, abierta_por, cerrada_por, tramo_inicio, tramo_area)
+        VALUES ((SELECT id FROM pacientes WHERE cui = '2514567890104'), 0, 'ABIERTA', 'HOSPITALIZACION', @hosp, (SELECT fecha_asignacion FROM hospitalizaciones WHERE id_hospitalizacion = @hosp), NULL, 'Marta Ramírez', NULL, (SELECT fecha_asignacion FROM hospitalizaciones WHERE id_hospitalizacion = @hosp), (SELECT sala FROM hospitalizaciones WHERE id_hospitalizacion = @hosp));
+      SET @cuenta = LAST_INSERT_ID();
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo * 1, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -1 DAY), '11:30:00'), id_servicio FROM servicios WHERE codigo = 'LAB-001';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo * 1, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -1 DAY), '11:40:00'), id_servicio FROM servicios WHERE codigo = 'IMG-002';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo * 1, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -1 DAY), '14:00:00'), id_servicio FROM servicios WHERE codigo = 'PRO-004';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo * 1, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL 0 DAY), '07:00:00'), id_servicio FROM servicios WHERE codigo = 'PRO-001';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha)
+        SELECT @cuenta, 'CARGO', 'MEDICAMENTO', CONCAT(nombre, ' — ', presentacion), 1, precio, precio * 1, 'Silvia Ordóñez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -1 DAY), '17:00:00') FROM medicamentos WHERE codigo = 'MED-016';
+      UPDATE cuentas_paciente SET saldo = (SELECT COALESCE(SUM(CASE WHEN tipo_movimiento = 'CARGO' THEN monto ELSE -monto END), 0) FROM movimientos_cuenta WHERE id_cuenta = @cuenta AND anulado = 0) WHERE id_cuenta = @cuenta;
+    END IF;
+    SET @hosp = (SELECT h.id_hospitalizacion FROM hospitalizaciones h JOIN pacientes p ON p.id = h.id_paciente WHERE p.cui = '2513456780101' AND h.estado = 'ACTIVO' ORDER BY h.id_hospitalizacion LIMIT 1);
+    IF @hosp IS NOT NULL THEN
+      INSERT INTO cuentas_paciente (id_paciente, saldo, estado, tipo, hospitalizacion_id, fecha_apertura, fecha_cierre, abierta_por, cerrada_por, tramo_inicio, tramo_area)
+        VALUES ((SELECT id FROM pacientes WHERE cui = '2513456780101'), 0, 'ABIERTA', 'HOSPITALIZACION', @hosp, (SELECT fecha_asignacion FROM hospitalizaciones WHERE id_hospitalizacion = @hosp), NULL, 'Marta Ramírez', NULL, (SELECT fecha_asignacion FROM hospitalizaciones WHERE id_hospitalizacion = @hosp), (SELECT sala FROM hospitalizaciones WHERE id_hospitalizacion = @hosp));
+      SET @cuenta = LAST_INSERT_ID();
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 2, costo, costo * 2, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -2 DAY), '21:50:00'), id_servicio FROM servicios WHERE codigo = 'LAB-005';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 2, costo, costo * 2, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -2 DAY), '21:50:00'), id_servicio FROM servicios WHERE codigo = 'IMG-003';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo * 1, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -2 DAY), '21:55:00'), id_servicio FROM servicios WHERE codigo = 'LAB-001';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha)
+        SELECT @cuenta, 'CARGO', 'MEDICAMENTO', CONCAT(nombre, ' — ', presentacion), 2, precio, precio * 2, 'Silvia Ordóñez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -2 DAY), '22:10:00') FROM medicamentos WHERE codigo = 'MED-020';
+      UPDATE cuentas_paciente SET saldo = (SELECT COALESCE(SUM(CASE WHEN tipo_movimiento = 'CARGO' THEN monto ELSE -monto END), 0) FROM movimientos_cuenta WHERE id_cuenta = @cuenta AND anulado = 0) WHERE id_cuenta = @cuenta;
+    END IF;
+    SET @hosp = (SELECT h.id_hospitalizacion FROM hospitalizaciones h JOIN pacientes p ON p.id = h.id_paciente WHERE p.cui = '2504567890106' AND h.estado = 'EGRESADO' ORDER BY h.id_hospitalizacion LIMIT 1);
+    IF @hosp IS NOT NULL THEN
+      INSERT INTO cuentas_paciente (id_paciente, saldo, estado, tipo, hospitalizacion_id, fecha_apertura, fecha_cierre, abierta_por, cerrada_por, tramo_inicio, tramo_area)
+        VALUES ((SELECT id FROM pacientes WHERE cui = '2504567890106'), 0, 'POR_COBRAR', 'HOSPITALIZACION', @hosp, (SELECT fecha_asignacion FROM hospitalizaciones WHERE id_hospitalizacion = @hosp), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -10 DAY), '11:00:00'), 'Marta Ramírez', 'Roberto Méndez', NULL, NULL);
+      SET @cuenta = LAST_INSERT_ID();
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo * 1, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -12 DAY), '10:40:00'), id_servicio FROM servicios WHERE codigo = 'LAB-001';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo * 1, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -12 DAY), '10:40:00'), id_servicio FROM servicios WHERE codigo = 'LAB-006';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha)
+        SELECT @cuenta, 'CARGO', 'MEDICAMENTO', CONCAT(nombre, ' — ', presentacion), 3, precio, precio * 3, 'Silvia Ordóñez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -12 DAY), '11:00:00') FROM medicamentos WHERE codigo = 'MED-018';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', 'DIA_CAMA', CONCAT(nombre, ' (2 días)'), 2, costo, costo * 2, 'Ana Lopez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -10 DAY), '11:00:00'), id_servicio FROM servicios WHERE codigo = 'CAMA-PED';
+      UPDATE cuentas_paciente SET saldo = (SELECT COALESCE(SUM(CASE WHEN tipo_movimiento = 'CARGO' THEN monto ELSE -monto END), 0) FROM movimientos_cuenta WHERE id_cuenta = @cuenta AND anulado = 0) WHERE id_cuenta = @cuenta;
+      SET @ref = @ref + 1;
+      UPDATE cuentas_paciente SET numero_referencia = CONCAT('SAL-', YEAR(CURDATE()), '-', LPAD(@ref, 6, '0')),
+        estado_cobro = 'PENDIENTE', fecha_vencimiento = DATE_ADD(CURDATE(), INTERVAL 5 DAY) WHERE id_cuenta = @cuenta;
+    END IF;
+    SET @hosp = (SELECT h.id_hospitalizacion FROM hospitalizaciones h JOIN pacientes p ON p.id = h.id_paciente WHERE p.cui = '2510123450103' AND h.estado = 'EGRESADO' ORDER BY h.id_hospitalizacion LIMIT 1);
+    IF @hosp IS NOT NULL THEN
+      INSERT INTO cuentas_paciente (id_paciente, saldo, estado, tipo, hospitalizacion_id, fecha_apertura, fecha_cierre, abierta_por, cerrada_por, tramo_inicio, tramo_area)
+        VALUES ((SELECT id FROM pacientes WHERE cui = '2510123450103'), 0, 'PAGADA', 'HOSPITALIZACION', @hosp, (SELECT fecha_asignacion FROM hospitalizaciones WHERE id_hospitalizacion = @hosp), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -16 DAY), '12:00:00'), 'Marta Ramírez', 'Roberto Méndez', NULL, NULL);
+      SET @cuenta = LAST_INSERT_ID();
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo * 1, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -20 DAY), '09:00:00'), id_servicio FROM servicios WHERE codigo = 'LAB-001';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo * 1, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -20 DAY), '09:00:00'), id_servicio FROM servicios WHERE codigo = 'LAB-002';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo * 1, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -20 DAY), '09:30:00'), id_servicio FROM servicios WHERE codigo = 'IMG-002';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo * 1, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -18 DAY), '08:00:00'), id_servicio FROM servicios WHERE codigo = 'PRO-005';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha)
+        SELECT @cuenta, 'CARGO', 'MEDICAMENTO', CONCAT(nombre, ' — ', presentacion), 4, precio, precio * 4, 'Silvia Ordóñez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -18 DAY), '12:00:00') FROM medicamentos WHERE codigo = 'MED-016';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', 'DIA_CAMA', CONCAT(nombre, ' (4 días)'), 4, costo, costo * 4, 'Ana Lopez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -16 DAY), '12:00:00'), id_servicio FROM servicios WHERE codigo = 'CAMA-GEN';
+      UPDATE cuentas_paciente SET saldo = (SELECT COALESCE(SUM(CASE WHEN tipo_movimiento = 'CARGO' THEN monto ELSE -monto END), 0) FROM movimientos_cuenta WHERE id_cuenta = @cuenta AND anulado = 0) WHERE id_cuenta = @cuenta;
+      SET @ref = @ref + 1;
+      UPDATE cuentas_paciente SET numero_referencia = CONCAT('SAL-', YEAR(CURDATE()), '-', LPAD(@ref, 6, '0')),
+        estado_cobro = 'PAGADO', fecha_vencimiento = DATE_ADD(CURDATE(), INTERVAL 0 DAY) WHERE id_cuenta = @cuenta;
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, monto, usuario, fecha)
+        SELECT @cuenta, 'PAGO', 'PAGO', CONCAT('Pago en Tributario, referencia ', numero_referencia, ', autorización AUT-58210447'), saldo, 'Tributario', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -15 DAY), '10:00:00') FROM cuentas_paciente WHERE id_cuenta = @cuenta;
+      UPDATE cuentas_paciente SET saldo = 0, numero_autorizacion = 'AUT-58210447', fecha_pago = TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -15 DAY), '10:00:00') WHERE id_cuenta = @cuenta;
+    END IF;
+    SET @hosp = (SELECT h.id_hospitalizacion FROM hospitalizaciones h JOIN pacientes p ON p.id = h.id_paciente WHERE p.cui = '2519012340101' AND h.estado = 'EGRESADO' ORDER BY h.id_hospitalizacion LIMIT 1);
+    IF @hosp IS NOT NULL THEN
+      INSERT INTO cuentas_paciente (id_paciente, saldo, estado, tipo, hospitalizacion_id, fecha_apertura, fecha_cierre, abierta_por, cerrada_por, tramo_inicio, tramo_area)
+        VALUES ((SELECT id FROM pacientes WHERE cui = '2519012340101'), 0, 'ABIERTA', 'HOSPITALIZACION', @hosp, (SELECT fecha_asignacion FROM hospitalizaciones WHERE id_hospitalizacion = @hosp), NULL, 'Marta Ramírez', NULL, NULL, NULL);
+      SET @cuenta = LAST_INSERT_ID();
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo * 1, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -8 DAY), '19:40:00'), id_servicio FROM servicios WHERE codigo = 'IMG-004';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo * 1, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -8 DAY), '20:00:00'), id_servicio FROM servicios WHERE codigo = 'PRO-006';
+      INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+        SELECT @cuenta, 'CARGO', 'DIA_CAMA', CONCAT(nombre, ' (1 día)'), 1, costo, costo * 1, 'Ana Lopez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -7 DAY), '09:00:00'), id_servicio FROM servicios WHERE codigo = 'CAMA-GEN';
+      UPDATE cuentas_paciente SET saldo = (SELECT COALESCE(SUM(CASE WHEN tipo_movimiento = 'CARGO' THEN monto ELSE -monto END), 0) FROM movimientos_cuenta WHERE id_cuenta = @cuenta AND anulado = 0) WHERE id_cuenta = @cuenta;
+    END IF;
+    INSERT INTO cuentas_paciente (id_paciente, saldo, estado, tipo, fecha_apertura, abierta_por) VALUES ((SELECT id FROM pacientes WHERE cui = '2515678900107'), 0, 'ABIERTA', 'AMBULATORIA', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL 0 DAY), '07:30:00'), 'Roberto Méndez');
+    SET @cuenta = LAST_INSERT_ID();
+    INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+      SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL 0 DAY), '07:35:00'), id_servicio FROM servicios WHERE codigo = 'IMG-002';
+    INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
+      SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL 0 DAY), '07:35:00'), id_servicio FROM servicios WHERE codigo = 'LAB-002';
+    UPDATE cuentas_paciente SET saldo = (SELECT SUM(monto) FROM movimientos_cuenta WHERE id_cuenta = @cuenta) WHERE id_cuenta = @cuenta;
+    SELECT 'Caja de demostración cargada' AS resultado;
+  END IF;
 END //
 DELIMITER ;
 
