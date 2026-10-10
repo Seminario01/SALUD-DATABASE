@@ -1,24 +1,19 @@
-CREATE DATABASE IF NOT EXISTS salud_db;
+-- UTF-8 completo para tildes y ñ (área, vacunación, Peña...)
+SET NAMES utf8mb4;
+CREATE DATABASE IF NOT EXISTS salud_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE salud_db;
 
 -- ============================================================
 -- Modulo: Gestion de usuarios y pacientes
 -- ============================================================
 
-CREATE TABLE usuarios_roles (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    cognito_sub VARCHAR(100) UNIQUE NOT NULL,
-    email VARCHAR(150) UNIQUE NOT NULL,
-    rol ENUM('admin', 'medico', 'paciente', 'recepcion') NOT NULL,
-    nombre_completo VARCHAR(200),
-    cui VARCHAR(20),
-    activo BOOLEAN DEFAULT TRUE,
-    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+-- No hay tabla de usuarios: los usuarios viven en el Login Unico (Keycloak).
+-- Cada registro que necesita un usuario guarda su `sub` (UUID de 36 caracteres),
+-- que es unico e inmutable. Nunca se usa el email como llave.
 
 CREATE TABLE pacientes (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    usuario_id INT NULL,
+    usuario_sub VARCHAR(36) NULL UNIQUE,  -- sub del ciudadano en el Login Unico
     cui VARCHAR(20),
     nombre_completo VARCHAR(200) NOT NULL,
     fecha_nacimiento DATE,
@@ -26,8 +21,7 @@ CREATE TABLE pacientes (
     telefono VARCHAR(20),
     tipo_seguro VARCHAR(50),
     cuidador VARCHAR(200),
-    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (usuario_id) REFERENCES usuarios_roles(id)
+    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ============================================================
@@ -37,29 +31,27 @@ CREATE TABLE pacientes (
 CREATE TABLE citas_medicas (
     id INT AUTO_INCREMENT PRIMARY KEY,
     paciente_id INT NOT NULL,
-    medico_id INT,
+    medico_sub VARCHAR(36),  -- sub del medico en el Login Unico
     fecha_hora DATETIME NOT NULL,
     estado ENUM('pendiente', 'confirmada', 'atendida', 'cancelada') DEFAULT 'pendiente',
     motivo VARCHAR(300),
     costo DECIMAL(10,2),
     pago_confirmado BOOLEAN DEFAULT FALSE,
     fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (paciente_id) REFERENCES pacientes(id),
-    FOREIGN KEY (medico_id) REFERENCES usuarios_roles(id)
+    FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
 );
 
 CREATE TABLE expedientes_clinicos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     paciente_id INT NOT NULL,
     cita_id INT NULL,
-    medico_id INT,
+    medico_sub VARCHAR(36),  -- sub del medico en el Login Unico
     diagnostico TEXT,
     tratamiento TEXT,
     notas TEXT,
     fecha_atencion DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (paciente_id) REFERENCES pacientes(id),
-    FOREIGN KEY (cita_id) REFERENCES citas_medicas(id),
-    FOREIGN KEY (medico_id) REFERENCES usuarios_roles(id)
+    FOREIGN KEY (cita_id) REFERENCES citas_medicas(id)
 );
 
 -- ============================================================
@@ -183,14 +175,13 @@ CREATE TABLE vacunas (
 
 CREATE TABLE auditoria (
     id_auditoria INT AUTO_INCREMENT PRIMARY KEY,
-    id_usuario INT,
+    usuario_sub VARCHAR(36),  -- sub del usuario en el Login Unico
     modulo VARCHAR(100),
     accion VARCHAR(50),
     tabla_afectada VARCHAR(100),
     registro_id INT,
     descripcion TEXT,
-    fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (id_usuario) REFERENCES usuarios_roles(id)
+    fecha DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE cuentas_paciente (
@@ -294,3 +285,22 @@ CREATE TABLE establecimientos (
 
 
 /*DROP DATABASE IF EXISTS salud_db;*/
+-- Bitácora de llamadas entre Salud y los otros módulos (saliente = Salud
+-- consulta a otro módulo; entrante = otro módulo consume un servicio de Salud).
+-- Los CUI se guardan enmascarados. El backend también la crea si no existe.
+CREATE TABLE IF NOT EXISTS bitacora_integraciones (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    fecha DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    direccion ENUM('saliente','entrante') NOT NULL,
+    modulo VARCHAR(30) NOT NULL,
+    operacion VARCHAR(120) NOT NULL,
+    metodo VARCHAR(10) NOT NULL,
+    ruta VARCHAR(255) NOT NULL,
+    estado_http INT,
+    resultado VARCHAR(30) NOT NULL,
+    duracion_ms INT,
+    simulado BOOLEAN NOT NULL DEFAULT FALSE,
+    usuario VARCHAR(100),
+    detalle VARCHAR(255),
+    INDEX idx_bitacora_fecha (fecha)
+);
