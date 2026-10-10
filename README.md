@@ -2,41 +2,66 @@
 
 Proyecto desarrollado para el Seminario de Graduación.
 
-## Módulos
+## Modulos
 
-- Administración
+- Administracion
 - Pacientes
-- Médicos
+- Medicos
 - Citas
-- Historial Médico
-- Hospitalización
-- Vacunación
+- Expedientes Clinicos / Historial Medico
+- Hospitalizacion
+- Vacunacion
 - Farmacia
 - Practicantes
-- Facturación
-- Auditoría
+- Turnos
+- Presupuesto y Auditoria
+- Facturacion
 
 ## Base de Datos
 
 Motor: MySQL
 
-## Tablas Principales
+## Tablas
 
+### Nucleo del modulo (usadas por la API)
+
+- usuarios_roles
 - pacientes
+- citas_medicas
+- expedientes_clinicos
+- recursos_hospitalarios
+- turnos
+- presupuesto_hospitalario
+- vacunacion
+
+### Ampliacion: catalogos
+
+- areas_hospital
+- especialidades
+- medicamentos
 - medicos
-- citas
+- practicantes
+- servicios
+- vacunas
+
+### Ampliacion: registros
+
+- auditoria
+- cuentas_paciente
 - historial_medico
 - hospitalizaciones
-- vacunas
-- vacunacion
-- medicamentos
 - recetas
-- practicantes
-- cuentas_paciente
-- auditoria
+
+### Ampliacion: detalle
+
+- detalle_receta
+- horas_practica
+- movimientos_cuenta
+- movimientos_inventario
 
 ## Integraciones
 
-- Educación
+- Educacion
 - Seguridad
-- Tesorería
+- Tributario
+- Auditoria Social
