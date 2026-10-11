@@ -37,6 +37,12 @@ CREATE TABLE citas_medicas (
     motivo VARCHAR(300),
     costo DECIMAL(10,2),
     pago_confirmado BOOLEAN DEFAULT FALSE,
+    numero_referencia VARCHAR(40) UNIQUE,  -- referencia que Salud genera para Tributario (SAL-AAAA-NNNNNN)
+    referencia_tributario VARCHAR(80),     -- referencia que Tributario asigna al registrar la obligacion
+    numero_autorizacion VARCHAR(80),
+    fecha_pago DATETIME,
+    monto_pagado DECIMAL(10,2),
+    evento_pago_id VARCHAR(100),           -- evento_id de la confirmacion de pago (idempotencia)
     fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
 );
