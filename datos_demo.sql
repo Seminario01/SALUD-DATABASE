@@ -525,6 +525,107 @@ BEGIN
     UPDATE cuentas_paciente SET saldo = (SELECT SUM(monto) FROM movimientos_cuenta WHERE id_cuenta = @cuenta) WHERE id_cuenta = @cuenta;
     SELECT 'Caja de demostración cargada' AS resultado;
   END IF;
+
+  -- ------------------------------------------------------------------------
+  -- Novedades: CIE-10, laboratorio, constancias y lista de espera.
+  -- Esas tablas y columnas las crea el backend al arrancar: si todavía no existen
+  -- (se cargó este script antes de levantar el backend), esta parte se salta.
+  -- ------------------------------------------------------------------------
+  IF (SELECT COUNT(*) FROM information_schema.columns
+      WHERE table_schema = DATABASE() AND table_name = 'expedientes_clinicos' AND column_name = 'codigo_cie10') > 0 THEN
+    UPDATE expedientes_clinicos SET codigo_cie10 = 'I10' WHERE diagnostico = 'Hipertensión arterial estadio 1' AND codigo_cie10 IS NULL;
+    UPDATE expedientes_clinicos SET codigo_cie10 = 'M54.5' WHERE diagnostico = 'Lumbalgia mecánica' AND codigo_cie10 IS NULL;
+    UPDATE expedientes_clinicos SET codigo_cie10 = 'E11.9' WHERE diagnostico = 'Diabetes mellitus tipo 2 en control' AND codigo_cie10 IS NULL;
+    UPDATE expedientes_clinicos SET codigo_cie10 = 'J03.9' WHERE diagnostico = 'Faringoamigdalitis bacteriana' AND codigo_cie10 IS NULL;
+    UPDATE expedientes_clinicos SET codigo_cie10 = 'Z00.0' WHERE diagnostico = 'Chequeo anual sin hallazgos' AND codigo_cie10 IS NULL;
+    UPDATE expedientes_clinicos SET codigo_cie10 = 'G43.9' WHERE diagnostico = 'Migraña sin aura' AND codigo_cie10 IS NULL;
+    UPDATE expedientes_clinicos SET codigo_cie10 = 'M17.9' WHERE diagnostico = 'Osteoartritis de rodilla' AND codigo_cie10 IS NULL;
+    UPDATE expedientes_clinicos SET codigo_cie10 = 'T14.1' WHERE diagnostico = 'Herida cortante en antebrazo izquierdo' AND codigo_cie10 IS NULL;
+  END IF;
+
+  IF (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'ordenes_laboratorio') > 0
+     AND (SELECT COUNT(*) FROM ordenes_laboratorio) = 0
+     AND (SELECT COUNT(*) FROM pacientes WHERE cui = '2501123450102') > 0 THEN
+    -- Hipertensa: función renal normal, colesterol y LDL altos
+    INSERT INTO ordenes_laboratorio (paciente_id, medico_nombre, fecha, prioridad, indicaciones, estado, fecha_muestra, muestra_por, fecha_resultado, resultado_por)
+      VALUES ((SELECT id FROM pacientes WHERE cui = '2501123450102'), 'Ana Lopez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -28 DAY), '09:25:00'), 'RUTINA', 'Ayuno de 8 horas',
+              'COMPLETADA', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -27 DAY), '07:30:00'), 'Marta Ramírez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -27 DAY), '11:00:00'), 'Marta Ramírez');
+    SET @orden = LAST_INSERT_ID();
+    INSERT INTO examenes_orden_laboratorio (orden_id, codigo, resultados) VALUES
+      (@orden, 'RENAL', '{"creatinina": 0.9, "bun": 14, "acido_urico": 5.2}'),
+      (@orden, 'LIPIDOS', '{"colesterol": 232, "hdl": 46, "ldl": 151, "trigliceridos": 138}');
+    -- Diabético: glucosa y HbA1c altas
+    INSERT INTO ordenes_laboratorio (paciente_id, medico_nombre, fecha, prioridad, indicaciones, estado, fecha_muestra, muestra_por, fecha_resultado, resultado_por, observaciones)
+      VALUES ((SELECT id FROM pacientes WHERE cui = '2507890120103'), 'Ana Lopez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -14 DAY), '08:30:00'), 'RUTINA', 'Ayuno de 8 horas',
+              'COMPLETADA', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -13 DAY), '07:15:00'), 'Marta Ramírez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -13 DAY), '10:40:00'), 'Marta Ramírez',
+              'Paciente refiere no haber cumplido el ayuno completo.');
+    SET @orden = LAST_INSERT_ID();
+    INSERT INTO examenes_orden_laboratorio (orden_id, codigo, resultados) VALUES
+      (@orden, 'GLUCOSA', '{"glucosa": 168}'),
+      (@orden, 'HBA1C', '{"hba1c": 7.1}');
+    -- Faringoamigdalitis: leucocitos, neutrófilos y PCR altos
+    INSERT INTO ordenes_laboratorio (paciente_id, medico_nombre, fecha, prioridad, estado, fecha_muestra, muestra_por, fecha_resultado, resultado_por)
+      VALUES ((SELECT id FROM pacientes WHERE cui = '2502345670104'), 'Ana Lopez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -10 DAY), '14:20:00'), 'URGENTE',
+              'COMPLETADA', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -10 DAY), '14:40:00'), 'Marta Ramírez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -10 DAY), '16:10:00'), 'Marta Ramírez');
+    SET @orden = LAST_INSERT_ID();
+    INSERT INTO examenes_orden_laboratorio (orden_id, codigo, resultados) VALUES
+      (@orden, 'HEMATO', '{"hemoglobina": 12.8, "hematocrito": 39, "leucocitos": 13.8, "neutrofilos": 82, "linfocitos": 14, "plaquetas": 310}'),
+      (@orden, 'PCR', '{"pcr": 24}');
+    -- Chequeo anual: todo normal
+    INSERT INTO ordenes_laboratorio (paciente_id, medico_nombre, fecha, prioridad, estado, fecha_muestra, muestra_por, fecha_resultado, resultado_por)
+      VALUES ((SELECT id FROM pacientes WHERE cui = '2513456780101'), 'Ana Lopez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -7 DAY), '09:50:00'), 'RUTINA',
+              'COMPLETADA', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -6 DAY), '07:20:00'), 'Marta Ramírez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -6 DAY), '12:00:00'), 'Marta Ramírez');
+    SET @orden = LAST_INSERT_ID();
+    INSERT INTO examenes_orden_laboratorio (orden_id, codigo, resultados) VALUES
+      (@orden, 'HEMATO', '{"hemoglobina": 14.6, "hematocrito": 44, "leucocitos": 6.9, "neutrofilos": 58, "linfocitos": 32, "plaquetas": 245}'),
+      (@orden, 'GLUCOSA', '{"glucosa": 88}'),
+      (@orden, 'ORINA', '{"ph": 6.0, "densidad": 1.018, "proteinas": "Negativo", "glucosa_orina": "Negativo", "nitritos": "Negativo", "leucocitos_campo": 2, "eritrocitos_campo": 1, "bacterias": "Escasas"}');
+    -- Hoy: una muestra ya tomada (falta el resultado) y dos pendientes, una urgente
+    INSERT INTO ordenes_laboratorio (paciente_id, medico_nombre, fecha, prioridad, indicaciones, estado, fecha_muestra, muestra_por)
+      VALUES ((SELECT id FROM pacientes WHERE cui = '2510123450103'), 'Ana Lopez', TIMESTAMP(CURDATE(), '07:40:00'), 'RUTINA', 'Primera orina de la mañana',
+              'EN_PROCESO', TIMESTAMP(CURDATE(), '08:05:00'), 'Marta Ramírez');
+    INSERT INTO examenes_orden_laboratorio (orden_id, codigo) VALUES (LAST_INSERT_ID(), 'ORINA');
+    INSERT INTO ordenes_laboratorio (paciente_id, medico_nombre, fecha, prioridad, indicaciones, estado)
+      VALUES ((SELECT id FROM pacientes WHERE cui = '2503456780107'), 'Ana Lopez', TIMESTAMP(CURDATE(), '08:15:00'), 'URGENTE', 'Fiebre de 3 días; descartar dengue', 'PENDIENTE');
+    SET @orden = LAST_INSERT_ID();
+    INSERT INTO examenes_orden_laboratorio (orden_id, codigo) VALUES (@orden, 'HEMATO'), (@orden, 'DENGUE');
+    INSERT INTO ordenes_laboratorio (paciente_id, medico_nombre, fecha, prioridad, estado)
+      VALUES ((SELECT id FROM pacientes WHERE cui = '2518901230103'), 'Ana Lopez', TIMESTAMP(CURDATE(), '08:30:00'), 'RUTINA', 'PENDIENTE');
+    SET @orden = LAST_INSERT_ID();
+    INSERT INTO examenes_orden_laboratorio (orden_id, codigo) VALUES (@orden, 'RENAL'), (@orden, 'HEPATICO');
+    SELECT 'Laboratorio de demostración cargado' AS resultado;
+  END IF;
+
+  IF (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'constancias_medicas') > 0
+     AND (SELECT COUNT(*) FROM constancias_medicas) = 0
+     AND (SELECT COUNT(*) FROM pacientes WHERE cui = '2501123450102') > 0 THEN
+    -- El código del QR: 12 caracteres al azar, como los genera el backend
+    INSERT INTO constancias_medicas (paciente_id, tipo, medico_nombre, fecha, fecha_atencion, diagnostico, dias_reposo, desde, hasta, observaciones, estado, codigo_verificacion)
+      VALUES ((SELECT id FROM pacientes WHERE cui = '2502345670104'), 'INCAPACIDAD', 'Ana Lopez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -10 DAY), '14:30:00'),
+              DATE_ADD(CURDATE(), INTERVAL -10 DAY), NULL, 3, DATE_ADD(CURDATE(), INTERVAL -10 DAY), DATE_ADD(CURDATE(), INTERVAL -8 DAY),
+              'Reposo en casa. Puede regresar a clases al terminar el reposo.', 'VIGENTE',
+              REPLACE(REPLACE(TO_BASE64(RANDOM_BYTES(9)), '+', '-'), '/', '_'));
+    INSERT INTO constancias_medicas (paciente_id, tipo, medico_nombre, fecha, fecha_atencion, diagnostico, dias_reposo, desde, hasta, observaciones, estado, codigo_verificacion)
+      VALUES ((SELECT id FROM pacientes WHERE cui = '2501234560109'), 'INCAPACIDAD', 'Ana Lopez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -1 DAY), '10:35:00'),
+              DATE_ADD(CURDATE(), INTERVAL -1 DAY), 'Herida cortante en antebrazo izquierdo', 7, DATE_ADD(CURDATE(), INTERVAL -1 DAY), DATE_ADD(CURDATE(), INTERVAL 5 DAY),
+              'No cargar peso con el brazo izquierdo. Retiro de puntos al terminar el reposo.', 'VIGENTE',
+              REPLACE(REPLACE(TO_BASE64(RANDOM_BYTES(9)), '+', '-'), '/', '_'));
+    INSERT INTO constancias_medicas (paciente_id, tipo, medico_nombre, fecha, fecha_atencion, estado, codigo_verificacion)
+      VALUES ((SELECT id FROM pacientes WHERE cui = '2513456780101'), 'CONSULTA', 'Ana Lopez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -7 DAY), '10:00:00'),
+              DATE_ADD(CURDATE(), INTERVAL -7 DAY), 'VIGENTE', REPLACE(REPLACE(TO_BASE64(RANDOM_BYTES(9)), '+', '-'), '/', '_'));
+  END IF;
+
+  IF (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'lista_espera_citas') > 0
+     AND (SELECT COUNT(*) FROM lista_espera_citas) = 0
+     AND (SELECT COUNT(*) FROM pacientes WHERE cui = '2501123450102') > 0 THEN
+    INSERT INTO lista_espera_citas (paciente_id, motivo, preferencia, estado, nota, fecha_registro, registrado_por, fecha_aviso) VALUES
+      ((SELECT id FROM pacientes WHERE cui = '2514567890104'), 'Control de crecimiento', 'Por las mañanas', 'AVISADO', 'Se le llamó; confirma cuando haya espacio',
+       TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -6 DAY), '09:10:00'), 'Julio Castillo', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -2 DAY), '15:00:00')),
+      ((SELECT id FROM pacientes WHERE cui = '2512345670106'), 'Dolor de rodilla', 'Cualquier día', 'ESPERANDO', NULL,
+       TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -3 DAY), '11:40:00'), 'Julio Castillo', NULL),
+      ((SELECT id FROM pacientes WHERE cui = '2509012340102'), 'Primera consulta de pediatría', 'Después de las 14:00 (estudia por la mañana)', 'ESPERANDO', NULL,
+       TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -1 DAY), '16:20:00'), 'Julio Castillo', NULL);
+  END IF;
 END //
 DELIMITER ;
 

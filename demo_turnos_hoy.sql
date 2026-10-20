@@ -3,7 +3,8 @@
 -- ==========================================================================
 -- Los turnos solo tienen sentido el día en que se crean. Correr este script
 -- el día de la presentación para llenar la pantalla de sala de espera.
--- Requiere haber cargado antes datos_demo.sql (usa sus pacientes).
+-- Requiere haber cargado antes datos_demo.sql (usa sus pacientes). Si el backend ya está
+-- actualizado, los turnos quedan clasificados con el triage de 5 colores.
 -- Si los turnos demo de hoy ya están, no hace nada. Numera después de los existentes.
 -- Uso:  mysql -u root -p < demo_turnos_hoy.sql
 -- ==========================================================================
@@ -31,6 +32,26 @@ BEGIN
     INSERT INTO turnos (paciente_id, tipo_atencion, numero_turno, estado, prioridad, fecha_hora_ingreso, fecha_hora_llamado, fecha_hora_atencion, modulo_asignado) VALUES ((SELECT id FROM pacientes WHERE cui = '2519012340101'), 'consulta_general', @base + 7, 'en_espera', 'normal', GREATEST(DATE_SUB(NOW(), INTERVAL 25 MINUTE), TIMESTAMP(CURDATE())), NULL, NULL, NULL);
     INSERT INTO turnos (paciente_id, tipo_atencion, numero_turno, estado, prioridad, fecha_hora_ingreso, fecha_hora_llamado, fecha_hora_atencion, modulo_asignado) VALUES ((SELECT id FROM pacientes WHERE cui = '2515678900107'), 'especialidad', @base + 8, 'en_espera', 'normal', GREATEST(DATE_SUB(NOW(), INTERVAL 15 MINUTE), TIMESTAMP(CURDATE())), NULL, NULL, NULL);
     INSERT INTO turnos (paciente_id, tipo_atencion, numero_turno, estado, prioridad, fecha_hora_ingreso, fecha_hora_llamado, fecha_hora_atencion, modulo_asignado) VALUES ((SELECT id FROM pacientes WHERE cui = '2507890120103'), 'emergencia', @base + 9, 'en_espera', 'urgente', GREATEST(DATE_SUB(NOW(), INTERVAL 5 MINUTE), TIMESTAMP(CURDATE())), NULL, NULL, NULL);
+    -- Triage de 5 colores (las columnas las crea el backend al arrancar)
+    IF (SELECT COUNT(*) FROM information_schema.columns
+        WHERE table_schema = DATABASE() AND table_name = 'turnos' AND column_name = 'triage') > 0 THEN
+      UPDATE turnos t JOIN pacientes p ON p.id = t.paciente_id
+        SET t.triage = CASE p.cui
+              WHEN '2501234560109' THEN 'NARANJA' WHEN '2511234560109' THEN 'NARANJA'
+              WHEN '2507890120103' THEN 'ROJO'    WHEN '2516789010105' THEN 'AMARILLO'
+              WHEN '2519012340101' THEN 'VERDE'   WHEN '2515678900107' THEN 'AZUL'
+              WHEN '2505678900101' THEN 'VERDE'   ELSE 'VERDE' END,
+            t.motivo_triage = CASE p.cui
+              WHEN '2501234560109' THEN 'Herida sangrante en antebrazo'
+              WHEN '2511234560109' THEN 'Dolor abdominal intenso, vómitos'
+              WHEN '2507890120103' THEN 'Glucosa capilar 420 mg/dL, somnoliento'
+              WHEN '2516789010105' THEN 'Migraña con vómitos, 2 días'
+              WHEN '2519012340101' THEN 'Tos y malestar general'
+              WHEN '2515678900107' THEN 'Control de estudios'
+              ELSE NULL END,
+            t.triage_por = 'Marta Ramírez', t.fecha_triage = t.fecha_hora_ingreso
+        WHERE t.fecha_hora_ingreso >= CURDATE() AND p.cui LIKE '25%' AND t.triage IS NULL;
+    END IF;
     SELECT 'Turnos de hoy cargados' AS resultado;
   END IF;
 END //
