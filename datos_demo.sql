@@ -10,6 +10,8 @@
 --   terminan en par -> Educación: es estudiante
 --
 -- Es seguro correrlo más de una vez: si los datos ya existen, no hace nada.
+-- Al final lista qué bloques cargó (el cliente mysql solo muestra el primer SELECT
+-- de un procedimiento, por eso los avisos se juntan en una tabla temporal).
 -- Uso:  mysql -u root -p < datos_demo.sql
 -- Los turnos de la sala de espera van aparte: demo_turnos_hoy.sql
 -- ==========================================================================
@@ -113,9 +115,9 @@ BEGIN
       ('Puesto de Salud San Pedro Las Huertas', 'PUESTO_SALUD', 'Calle principal', 'Sacatepéquez', 'Antigua Guatemala', '78316655', 'ACTIVO', 'CONSULTA_GENERAL'),
       ('Hospital Roosevelt', 'HOSPITAL', 'Calzada Roosevelt, zona 11', 'Guatemala', 'Guatemala', '23217400', 'ACTIVO', 'EMERGENCIA,ESPECIALIDAD');
 
-    SELECT 'Datos de demostración cargados' AS resultado;
+    INSERT INTO demo_resultado (resultado) VALUES ('Datos de demostración cargados');
   ELSE
-    SELECT 'Los datos de demostración ya estaban cargados' AS resultado;
+    INSERT INTO demo_resultado (resultado) VALUES ('Pacientes, citas y expedientes base: ya estaban cargados');
   END IF;
 
   -- Practicantes y sus horas (WS-SALUD-06 / WS-SALUD-07). Bloque aparte para
@@ -143,7 +145,7 @@ BEGIN
       ((SELECT id_practicante FROM practicantes WHERE dpi = '2522345670100'), DATE_SUB(CURDATE(), INTERVAL 18 DAY), 6, 'Vacunación'),
       ((SELECT id_practicante FROM practicantes WHERE dpi = '2522345670100'), DATE_SUB(CURDATE(), INTERVAL 11 DAY), 6, 'Atención en encamamiento'),
       ((SELECT id_practicante FROM practicantes WHERE dpi = '2522345670100'), DATE_SUB(CURDATE(), INTERVAL 4 DAY), 6, 'Educación en salud a pacientes');
-    SELECT 'Practicantes de demostración cargados' AS resultado;
+    INSERT INTO demo_resultado (resultado) VALUES ('Practicantes de demostración cargados');
   END IF;
 
   -- Farmacia: catálogo, inventario y recetas ligadas a las atenciones del expediente
@@ -196,7 +198,7 @@ BEGIN
     SET @receta = LAST_INSERT_ID();
     INSERT INTO detalle_receta (id_receta, id_medicamento, cantidad, dosis) VALUES (@receta, (SELECT id_medicamento FROM medicamentos WHERE codigo = 'MED-008'), 28, '1 cápsula cada 6 horas por 7 días');
     INSERT INTO detalle_receta (id_receta, id_medicamento, cantidad, dosis) VALUES (@receta, (SELECT id_medicamento FROM medicamentos WHERE codigo = 'MED-001'), 10, '1 tableta cada 8 horas si hay dolor');
-    SELECT 'Farmacia de demostración cargada' AS resultado;
+    INSERT INTO demo_resultado (resultado) VALUES ('Farmacia de demostración cargada');
   END IF;
 
   -- Hospitalización: censo de camas, pacientes ingresados, una orden pendiente y egresos
@@ -304,7 +306,7 @@ BEGIN
     -- Categorías de camas repetidas (sin censo) se quitan para que los totales no se dupliquen
     DELETE FROM recursos_hospitalarios WHERE tipo = 'cama' AND descripcion IN ('Camas área general', 'Camas de pediatría', 'Camas de cuidados intensivos')
       AND id NOT IN (SELECT DISTINCT recurso_id FROM camas);
-    SELECT 'Hospitalización de demostración cargada' AS resultado;
+    INSERT INTO demo_resultado (resultado) VALUES ('Hospitalización de demostración cargada');
   END IF;
 
   -- Caja: catálogo de servicios, medicamentos de uso hospitalario y cuentas de los pacientes
@@ -523,7 +525,7 @@ BEGIN
     INSERT INTO movimientos_cuenta (id_cuenta, tipo_movimiento, categoria, descripcion, cantidad, precio_unitario, monto, usuario, fecha, servicio_id)
       SELECT @cuenta, 'CARGO', categoria, nombre, 1, costo, costo, 'Roberto Méndez', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL 0 DAY), '07:35:00'), id_servicio FROM servicios WHERE codigo = 'LAB-002';
     UPDATE cuentas_paciente SET saldo = (SELECT SUM(monto) FROM movimientos_cuenta WHERE id_cuenta = @cuenta) WHERE id_cuenta = @cuenta;
-    SELECT 'Caja de demostración cargada' AS resultado;
+    INSERT INTO demo_resultado (resultado) VALUES ('Caja de demostración cargada');
   END IF;
 
   -- ------------------------------------------------------------------------
@@ -593,7 +595,7 @@ BEGIN
       VALUES ((SELECT id FROM pacientes WHERE cui = '2518901230103'), 'Ana Lopez', TIMESTAMP(CURDATE(), '08:30:00'), 'RUTINA', 'PENDIENTE');
     SET @orden = LAST_INSERT_ID();
     INSERT INTO examenes_orden_laboratorio (orden_id, codigo) VALUES (@orden, 'RENAL'), (@orden, 'HEPATICO');
-    SELECT 'Laboratorio de demostración cargado' AS resultado;
+    INSERT INTO demo_resultado (resultado) VALUES ('Laboratorio de demostración cargado');
   END IF;
 
   IF (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'constancias_medicas') > 0
@@ -685,7 +687,7 @@ BEGIN
     INSERT INTO pacientes (cui, nombre_completo, fecha_nacimiento, genero, telefono, tipo_seguro, municipio, zona) VALUES ('3001000190108', 'Carmen Rosario Velásquez Cano', '1982-11-11', 'F', NULL, 'Ninguno', '0108', 'Colonia El Milagro');
     INSERT INTO expedientes_clinicos (paciente_id, diagnostico, codigo_cie10, tratamiento, fecha_atencion) VALUES ((SELECT id FROM pacientes WHERE cui = '3001000190108'), 'Faringitis aguda', 'J02.9', 'Según protocolo', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -19 DAY), '14:13:00'));
     INSERT INTO expedientes_clinicos (paciente_id, diagnostico, codigo_cie10, tratamiento, fecha_atencion) VALUES ((SELECT id FROM pacientes WHERE cui = '3001000190108'), 'Resfriado común', 'J00', 'Según protocolo', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -27 DAY), '15:09:00'));
-    SELECT 'Vigilancia epidemiológica de demostración cargada' AS resultado;
+    INSERT INTO demo_resultado (resultado) VALUES ('Vigilancia epidemiológica de demostración cargada');
   END IF;
 
   -- ------------------------------------------------------------------------
@@ -709,10 +711,16 @@ BEGIN
       ((SELECT id FROM pacientes WHERE cui = '3001000210115'), DATE_SUB(CURDATE(), INTERVAL 8 MONTH), 7.9, 67.6, 'Marta Ramírez', NOW()),
       ((SELECT id FROM pacientes WHERE cui = '3001000210115'), DATE_SUB(CURDATE(), INTERVAL 4 MONTH), 9.0, 73.3, 'Marta Ramírez', NOW()),
       ((SELECT id FROM pacientes WHERE cui = '3001000210115'), DATE_SUB(CURDATE(), INTERVAL 0 MONTH), 9.8, 77.5, 'Marta Ramírez', NOW());
-    SELECT 'Crecimiento infantil de demostración cargado' AS resultado;
+    INSERT INTO demo_resultado (resultado) VALUES ('Crecimiento infantil de demostración cargado');
   END IF;
 END //
 DELIMITER ;
 
+DROP TEMPORARY TABLE IF EXISTS demo_resultado;
+CREATE TEMPORARY TABLE demo_resultado (n INT AUTO_INCREMENT PRIMARY KEY, resultado VARCHAR(200));
 CALL cargar_datos_demo();
+SELECT resultado FROM demo_resultado ORDER BY n;
+SELECT 'Lo demás ya estaba cargado: no se agregó nada nuevo' AS resultado FROM DUAL
+  WHERE NOT EXISTS (SELECT 1 FROM demo_resultado WHERE resultado NOT LIKE '%ya estaban%');
+DROP TEMPORARY TABLE demo_resultado;
 DROP PROCEDURE cargar_datos_demo;
