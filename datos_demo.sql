@@ -687,6 +687,30 @@ BEGIN
     INSERT INTO expedientes_clinicos (paciente_id, diagnostico, codigo_cie10, tratamiento, fecha_atencion) VALUES ((SELECT id FROM pacientes WHERE cui = '3001000190108'), 'Resfriado común', 'J00', 'Según protocolo', TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL -27 DAY), '15:09:00'));
     SELECT 'Vigilancia epidemiológica de demostración cargada' AS resultado;
   END IF;
+
+  -- ------------------------------------------------------------------------
+  -- Crecimiento infantil (curvas de la OMS): una niña de 2 años y medio con retardo del
+  -- crecimiento (desnutrición crónica) y un niño de 14 meses que crece bien.
+  -- ------------------------------------------------------------------------
+  IF (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'mediciones_crecimiento') > 0
+     AND (SELECT COUNT(*) FROM information_schema.columns
+          WHERE table_schema = DATABASE() AND table_name = 'pacientes' AND column_name = 'municipio') > 0
+     AND (SELECT COUNT(*) FROM pacientes WHERE cui = '3001000200108') = 0 THEN
+    INSERT INTO pacientes (cui, nombre_completo, fecha_nacimiento, genero, telefono, tipo_seguro, cuidador, municipio, zona) VALUES
+      ('3001000200108', 'Yesenia Abigail Chumil Tzoc', DATE_SUB(CURDATE(), INTERVAL 30 MONTH), 'F', '55871203', 'Ninguno', 'Juana Tzoc (madre)', '0108', 'Colonia El Milagro'),
+      ('3001000210115', 'Josué Emanuel Pérez Ajanel', DATE_SUB(CURDATE(), INTERVAL 14 MONTH), 'M', '44219087', 'IGSS', 'María Ajanel (madre)', '0115', 'Zona 6, Ciudad Real');
+    INSERT INTO mediciones_crecimiento (paciente_id, fecha, peso_kg, talla_cm, registrado_por, fecha_registro) VALUES
+      ((SELECT id FROM pacientes WHERE cui = '3001000200108'), DATE_SUB(CURDATE(), INTERVAL 24 MONTH), 6.8, 63.0, 'Marta Ramírez', NOW()),
+      ((SELECT id FROM pacientes WHERE cui = '3001000200108'), DATE_SUB(CURDATE(), INTERVAL 18 MONTH), 8.0, 69.5, 'Marta Ramírez', NOW()),
+      ((SELECT id FROM pacientes WHERE cui = '3001000200108'), DATE_SUB(CURDATE(), INTERVAL 12 MONTH), 9.0, 74.0, 'Marta Ramírez', NOW()),
+      ((SELECT id FROM pacientes WHERE cui = '3001000200108'), DATE_SUB(CURDATE(), INTERVAL 6 MONTH), 9.9, 78.0, 'Marta Ramírez', NOW()),
+      ((SELECT id FROM pacientes WHERE cui = '3001000200108'), DATE_SUB(CURDATE(), INTERVAL 0 MONTH), 10.7, 81.5, 'Marta Ramírez', NOW()),
+      ((SELECT id FROM pacientes WHERE cui = '3001000210115'), DATE_SUB(CURDATE(), INTERVAL 12 MONTH), 5.5, 58.0, 'Marta Ramírez', NOW()),
+      ((SELECT id FROM pacientes WHERE cui = '3001000210115'), DATE_SUB(CURDATE(), INTERVAL 8 MONTH), 7.9, 67.6, 'Marta Ramírez', NOW()),
+      ((SELECT id FROM pacientes WHERE cui = '3001000210115'), DATE_SUB(CURDATE(), INTERVAL 4 MONTH), 9.0, 73.3, 'Marta Ramírez', NOW()),
+      ((SELECT id FROM pacientes WHERE cui = '3001000210115'), DATE_SUB(CURDATE(), INTERVAL 0 MONTH), 9.8, 77.5, 'Marta Ramírez', NOW());
+    SELECT 'Crecimiento infantil de demostración cargado' AS resultado;
+  END IF;
 END //
 DELIMITER ;
 
