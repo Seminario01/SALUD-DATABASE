@@ -46,9 +46,10 @@ MAYA_KICHE = {"03", "04", "07", "08", "09", "14"}
 MAYA_QEQCHI = {"16", "17", "15"}
 MAM = {"12", "13"}
 # media de talla/edad (z) de los niños por región: la desnutrición crónica es mucho mayor en el occidente
-Z_TALLA = {"08": -2.0, "07": -1.8, "14": -1.8, "13": -1.7, "12": -1.4, "16": -1.6, "15": -1.3, "04": -1.3,
-           "09": -1.2, "21": -1.2, "20": -1.1, "19": -0.9, "02": -0.8, "22": -0.9, "03": -0.9, "17": -0.8,
-           "18": -0.8, "05": -0.6, "06": -0.7, "10": -0.8, "11": -0.7, "01": -0.4}
+# (aprox. a la ENSMI: cerca de la mitad de los niños con talla baja; 7 de cada 10 en Totonicapán)
+Z_TALLA = {"08": -2.4, "07": -2.2, "14": -2.2, "13": -2.0, "16": -1.9, "12": -1.8, "15": -1.6, "04": -1.6,
+           "09": -1.5, "21": -1.5, "20": -1.4, "19": -1.3, "02": -1.1, "22": -1.2, "03": -1.2, "17": -1.1,
+           "18": -1.1, "05": -0.9, "06": -1.0, "10": -1.1, "11": -1.0, "01": -0.6}
 
 EXCLUIR = {"0101", "0102", "0103", "0104", "0105", "0106", "0107", "0108", "0109", "0115", "2002"}  # ya tienen datos demo/pruebas
 BROTES = {("0501", "arbovirosis"): (9, 2), ("1601", "diarreicas"): (8, 3)}   # (últimos 7 días, 4 semanas antes)
@@ -594,20 +595,28 @@ def medicion(p, dias_atras, z_talla, z_peso):
     return (dias_atras, round(peso, 1), round(talla, 1))
 
 
-mediciones = []
-for a in atenciones:
+# Generador aparte: así las mediciones se pueden rehacer sin cambiar pacientes ni atenciones ya cargados.
+# Primero los niños con desnutrición (su medición debe coincidir con el diagnóstico), luego los controles.
+R2 = random.Random(5)
+PRIORIDAD = {"desnut_sev": 0, "desnut_mod": 1, "control_nino": 2}
+mediciones, notas_crecimiento = [], []
+for a in sorted((a for a in atenciones if a["k"] in PRIORIDAD), key=lambda a: (PRIORIDAD[a["k"]], a["d"])):
     p = a["p"]
-    if a["k"] not in ("control_nino", "desnut_mod", "desnut_sev") or p.get("medido"):
+    if p.get("medido"):
         continue
     p["medido"] = True
-    zt = max(-3.6, min(1.5, R.gauss(Z_TALLA[p["depto"]], 0.9)))
-    zp = {"desnut_mod": R.uniform(-2.9, -2.1), "desnut_sev": R.uniform(-3.6, -3.1)}.get(a["k"], max(-1.6, min(2.2, R.gauss(0.2, 0.8))))
-    for n, extra in enumerate((0, 75, 150)[: R.randint(1, 3)]):
-        m = medicion(p, a["d"] + extra, zt + R.uniform(-0.15, 0.15), (zp if n == 0 else max(-1.8, zp + 0.8)))
+    zt = max(-3.8, min(1.2, R2.gauss(Z_TALLA[p["depto"]], 0.8)))
+    zp = {"desnut_mod": R2.uniform(-2.9, -2.1), "desnut_sev": R2.uniform(-3.6, -3.1)}.get(a["k"], max(-1.6, min(2.2, R2.gauss(0.2, 0.8))))
+    z_dia = None                                    # z de talla/edad de la medición del día de la atención
+    for n, extra in enumerate((0, 75, 150)[: R2.randint(1, 3)]):
+        m = medicion(p, a["d"] + extra, zt + R2.uniform(-0.15, 0.15), (zp if n == 0 else max(-1.8, zp + 0.8)))
         if m:
             mediciones.append((p, *m))
-    if a["k"] == "control_nino" and zt < -2:
-        a["nota_extra"] = f"Retardo del crecimiento (talla/edad z {zt:.1f}). Consejería en alimentación y micronutrientes."
+            if n == 0:
+                z_dia = crecimiento.puntaje_z("talla_edad", p["sexo"], p["edad_dias"] - a["d"], m[2])
+    if a["k"] == "control_nino":
+        notas_crecimiento.append((p, a["d"], f"Retardo del crecimiento (talla/edad z {z_dia:.1f}). Consejería en alimentación y micronutrientes."
+                                  if z_dia is not None and z_dia < -2 else None))
 
 ESQUEMA = [(0, "BCG y hepatitis B"), (60, "Pentavalente, polio, rotavirus y neumococo (1.ª dosis)"),
            (120, "Pentavalente, polio, rotavirus y neumococo (2.ª dosis)"), (180, "Pentavalente y polio (3.ª dosis)"),
@@ -665,8 +674,6 @@ for a in sorted(atenciones, key=lambda a: -a["d"]):
         trat, meds, nota = C[k][6](p_eval)
     if p["peso"] and nino(p_eval) and meds:
         nota = f"Peso {p['peso']} kg. " + (nota or "")
-    if a.get("nota_extra"):
-        nota = (nota + " " if nota else "") + a["nota_extra"]
     h = hora(d)
     medico = MEDICOS[(int(p["mun"]) + d) % len(MEDICOS)]
     w(f"    INSERT INTO expedientes_clinicos (paciente_id, diagnostico, codigo_cie10, tratamiento, notas, fecha_atencion) "
@@ -690,9 +697,17 @@ for a in sorted(atenciones, key=lambda a: -a["d"]):
             w(f"    INSERT INTO movimientos_inventario (id_medicamento, tipo_movimiento, cantidad, fecha, observacion, receta_id, usuario) "
               f"VALUES ((SELECT id_medicamento FROM medicamentos WHERE codigo = {q(med)}), 'SALIDA', -{cant}, {cuando(d, hd)}, 'Despacho de receta', @r, 'farmacia1');")
 
+# Crecimiento: va aparte porque también se puede REHACER sobre una población ya cargada (versión 2).
+# Las fechas se cuentan desde @carga, el día en que se cargó la población (fecha_registro + 200 días).
+REGISTRO_V2 = "Enfermería del puesto de salud"
+crec = []
 for p, dias, peso, talla in mediciones:
-    w(f"    INSERT INTO mediciones_crecimiento (paciente_id, fecha, peso_kg, talla_cm, registrado_por, fecha_registro) "
-      f"VALUES ((SELECT id FROM pacientes WHERE cui = {q(p['cui'])}), DATE_SUB(CURDATE(), INTERVAL {dias} DAY), {peso}, {talla}, 'Enfermería', NOW());")
+    crec.append(f"    INSERT INTO mediciones_crecimiento (paciente_id, fecha, peso_kg, talla_cm, registrado_por, fecha_registro) "
+                f"VALUES ((SELECT id FROM pacientes WHERE cui = {q(p['cui'])}), DATE_SUB(@carga, INTERVAL {dias} DAY), {peso}, {talla}, '{REGISTRO_V2}', NOW());")
+for p, dias, extra in notas_crecimiento:
+    nueva = f"CONCAT_WS(' ', NULLIF(TRIM(SUBSTRING_INDEX(COALESCE(e.notas, ''), 'Retardo del crecimiento', 1)), ''), {q(extra)})"
+    crec.append(f"    UPDATE expedientes_clinicos e JOIN pacientes p ON p.id = e.paciente_id SET e.notas = NULLIF({nueva}, '') "
+                f"WHERE p.cui = {q(p['cui'])} AND e.codigo_cie10 = 'Z00.1' AND DATE(e.fecha_atencion) = DATE_SUB(@carga, INTERVAL {dias} DAY);")
 for p, estudiante, completo, pendientes in vacunas:
     w(f"    INSERT INTO vacunacion (paciente_id, es_estudiante, esquema_completo, vacunas_pendientes) "
       f"VALUES ((SELECT id FROM pacientes WHERE cui = {q(p['cui'])}), {estudiante}, {q(completo)}, {q(pendientes)});")
@@ -741,11 +756,23 @@ BEGIN
       OR (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'pacientes' AND column_name = 'municipio') = 0 THEN
     SELECT 'Primero actualice el backend (crea la residencia y el crecimiento infantil)' AS resultado;
   ELSEIF (SELECT COUNT(*) FROM pacientes WHERE cui = '{primero}') > 0 THEN
-    SELECT 'La población de demostración ya estaba cargada' AS resultado;
+    IF (SELECT COUNT(*) FROM mediciones_crecimiento WHERE registrado_por = '{REGISTRO_V2}') > 0 THEN
+      SELECT 'La población de demostración ya estaba cargada' AS resultado;
+    ELSE
+      -- Cargada con la versión 1: se rehacen solo las mediciones de crecimiento (y sus notas)
+      SET @carga = (SELECT DATE(fecha_registro) + INTERVAL 200 DAY FROM pacientes WHERE cui = '{primero}');
+      DELETE m FROM mediciones_crecimiento m JOIN pacientes p ON p.id = m.paciente_id
+        WHERE p.cui LIKE '39%' AND LENGTH(p.cui) = 13 AND m.registrado_por = 'Enfermería';
+""")
+    f.write("\n".join("  " + x for x in crec) + "\n")
+    f.write(f"""      SELECT 'Crecimiento infantil de la población actualizado ({len(mediciones)} mediciones)' AS resultado;
+    END IF;
   ELSE
+    SET @carga = CURDATE();
 """)
     f.write("\n".join(inventario) + "\n")
     f.write("\n".join(lineas) + "\n")
+    f.write("\n".join(crec) + "\n")
     f.write(f"""    SELECT '{resumen}' AS resultado;
   END IF;
 END //
