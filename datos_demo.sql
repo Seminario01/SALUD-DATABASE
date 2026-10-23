@@ -109,11 +109,28 @@ BEGIN
       ('2026-Q4', 520000.00, 96400.00, 'Presupuesto trimestral hospital (demo)');
 
     -- Establecimientos (WS-SALUD-02, consumido por Seguridad)
-    INSERT INTO establecimientos (nombre, tipo, direccion, departamento, municipio, telefono, estado_servicio, tipo_atencion_disponible) VALUES
-      ('Hospital Nacional Pedro de Bethancourt', 'HOSPITAL', 'Aldea San Felipe de Jesús', 'Sacatepéquez', 'Antigua Guatemala', '78319600', 'ACTIVO', 'EMERGENCIA,CONSULTA_GENERAL,ESPECIALIDAD'),
-      ('Centro de Salud Antigua Guatemala', 'CENTRO_SALUD', '6a. Calle Poniente', 'Sacatepéquez', 'Antigua Guatemala', '78320214', 'ACTIVO', 'CONSULTA_GENERAL,VACUNACION'),
-      ('Puesto de Salud San Pedro Las Huertas', 'PUESTO_SALUD', 'Calle principal', 'Sacatepéquez', 'Antigua Guatemala', '78316655', 'ACTIVO', 'CONSULTA_GENERAL'),
-      ('Hospital Roosevelt', 'HOSPITAL', 'Calzada Roosevelt, zona 11', 'Guatemala', 'Guatemala', '23217400', 'ACTIVO', 'EMERGENCIA,ESPECIALIDAD');
+    -- Si el backend ya cargó la red del MSPAS (establecimientos.py), los dos hospitales ya existen:
+    -- solo se completa su dirección y teléfono (así no quedan repetidos).
+    IF (SELECT COUNT(*) FROM establecimientos WHERE nombre IN ('Hospital Pedro de Bethancourt', 'Hospital Nacional Pedro de Bethancourt')) = 0 THEN
+      INSERT INTO establecimientos (nombre, tipo, direccion, departamento, municipio, telefono, estado_servicio, tipo_atencion_disponible) VALUES
+        ('Hospital Pedro de Bethancourt', 'HOSPITAL', 'Aldea San Felipe de Jesús', 'Sacatepéquez', 'Antigua Guatemala', '78319600', 'ACTIVO', 'EMERGENCIA,CONSULTA_GENERAL,ESPECIALIDAD');
+    ELSE
+      UPDATE establecimientos SET direccion = COALESCE(direccion, 'Aldea San Felipe de Jesús'), telefono = COALESCE(telefono, '78319600')
+        WHERE nombre IN ('Hospital Pedro de Bethancourt', 'Hospital Nacional Pedro de Bethancourt');
+    END IF;
+    IF (SELECT COUNT(*) FROM establecimientos WHERE nombre = 'Hospital Roosevelt') = 0 THEN
+      INSERT INTO establecimientos (nombre, tipo, direccion, departamento, municipio, telefono, estado_servicio, tipo_atencion_disponible) VALUES
+        ('Hospital Roosevelt', 'HOSPITAL', 'Calzada Roosevelt, zona 11', 'Guatemala', 'Guatemala', '23217400', 'ACTIVO', 'EMERGENCIA,CONSULTA_GENERAL,ESPECIALIDAD');
+    ELSE
+      UPDATE establecimientos SET direccion = COALESCE(direccion, 'Calzada Roosevelt, zona 11'), telefono = COALESCE(telefono, '23217400')
+        WHERE nombre = 'Hospital Roosevelt';
+    END IF;
+    INSERT INTO establecimientos (nombre, tipo, direccion, departamento, municipio, telefono, estado_servicio, tipo_atencion_disponible)
+      SELECT 'Centro de Salud Antigua Guatemala', 'CENTRO_SALUD', '6a. Calle Poniente', 'Sacatepéquez', 'Antigua Guatemala', '78320214', 'ACTIVO', 'CONSULTA_GENERAL,VACUNACION'
+      FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM establecimientos WHERE nombre = 'Centro de Salud Antigua Guatemala');
+    INSERT INTO establecimientos (nombre, tipo, direccion, departamento, municipio, telefono, estado_servicio, tipo_atencion_disponible)
+      SELECT 'Puesto de Salud San Pedro Las Huertas', 'PUESTO_SALUD', 'Calle principal', 'Sacatepéquez', 'Antigua Guatemala', '78316655', 'ACTIVO', 'CONSULTA_GENERAL'
+      FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM establecimientos WHERE nombre = 'Puesto de Salud San Pedro Las Huertas');
 
     INSERT INTO demo_resultado (resultado) VALUES ('Datos de demostración cargados');
   ELSE
