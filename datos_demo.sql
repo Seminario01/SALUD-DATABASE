@@ -730,6 +730,56 @@ BEGIN
       ((SELECT id FROM pacientes WHERE cui = '3001000210115'), DATE_SUB(CURDATE(), INTERVAL 0 MONTH), 9.8, 77.5, 'Marta Ramírez', NOW());
     INSERT INTO demo_resultado (resultado) VALUES ('Crecimiento infantil de demostración cargado');
   END IF;
+  -- Segunda sede (Hospital Roosevelt): su propio censo de camas y recursos (SALUD-BACKEND/sedes.py).
+  -- Solo cuando el backend ya creó las columnas de sedes.
+  IF (SELECT COUNT(*) FROM information_schema.columns
+      WHERE table_schema = DATABASE() AND table_name = 'camas' AND column_name = 'sede_id') > 0
+     AND (SELECT COUNT(*) FROM information_schema.columns
+          WHERE table_schema = DATABASE() AND table_name = 'establecimientos' AND column_name = 'es_sede') > 0
+     AND (SELECT COUNT(*) FROM establecimientos WHERE nombre = 'Hospital Roosevelt') > 0
+     AND (SELECT COUNT(*) FROM camas WHERE codigo LIKE 'ROO-%') = 0 THEN
+    SET @roo = (SELECT MIN(id_establecimiento) FROM establecimientos WHERE nombre = 'Hospital Roosevelt');
+    UPDATE establecimientos SET es_sede = 1 WHERE id_establecimiento = @roo;
+    INSERT INTO recursos_hospitalarios (tipo, descripcion, disponible, total, sede_id) VALUES ('cama', 'Camas área general', 0, 0, @roo);
+    SET @recurso = LAST_INSERT_ID();
+    INSERT INTO camas (codigo, area, recurso_id, estado, sede_id) VALUES
+      ('ROO-GEN-01', 'Medicina general', @recurso, 'DISPONIBLE', @roo),
+      ('ROO-GEN-02', 'Medicina general', @recurso, 'DISPONIBLE', @roo),
+      ('ROO-GEN-03', 'Medicina general', @recurso, 'DISPONIBLE', @roo),
+      ('ROO-GEN-04', 'Medicina general', @recurso, 'DISPONIBLE', @roo),
+      ('ROO-GEN-05', 'Medicina general', @recurso, 'DISPONIBLE', @roo),
+      ('ROO-GEN-06', 'Medicina general', @recurso, 'DISPONIBLE', @roo),
+      ('ROO-GEN-07', 'Medicina general', @recurso, 'DISPONIBLE', @roo),
+      ('ROO-GEN-08', 'Medicina general', @recurso, 'DISPONIBLE', @roo),
+      ('ROO-GEN-09', 'Medicina general', @recurso, 'DISPONIBLE', @roo),
+      ('ROO-GEN-10', 'Medicina general', @recurso, 'DISPONIBLE', @roo);
+    INSERT INTO recursos_hospitalarios (tipo, descripcion, disponible, total, sede_id) VALUES ('cama', 'Camas de pediatría', 0, 0, @roo);
+    SET @recurso = LAST_INSERT_ID();
+    INSERT INTO camas (codigo, area, recurso_id, estado, sede_id) VALUES
+      ('ROO-PED-01', 'Pediatría', @recurso, 'DISPONIBLE', @roo),
+      ('ROO-PED-02', 'Pediatría', @recurso, 'DISPONIBLE', @roo),
+      ('ROO-PED-03', 'Pediatría', @recurso, 'DISPONIBLE', @roo),
+      ('ROO-PED-04', 'Pediatría', @recurso, 'DISPONIBLE', @roo),
+      ('ROO-PED-05', 'Pediatría', @recurso, 'DISPONIBLE', @roo),
+      ('ROO-PED-06', 'Pediatría', @recurso, 'DISPONIBLE', @roo);
+    INSERT INTO recursos_hospitalarios (tipo, descripcion, disponible, total, sede_id) VALUES ('cama', 'Camas de cuidados intensivos', 0, 0, @roo);
+    SET @recurso = LAST_INSERT_ID();
+    INSERT INTO camas (codigo, area, recurso_id, estado, sede_id) VALUES
+      ('ROO-UCI-01', 'Cuidados intensivos', @recurso, 'DISPONIBLE', @roo),
+      ('ROO-UCI-02', 'Cuidados intensivos', @recurso, 'DISPONIBLE', @roo),
+      ('ROO-UCI-03', 'Cuidados intensivos', @recurso, 'DISPONIBLE', @roo),
+      ('ROO-UCI-04', 'Cuidados intensivos', @recurso, 'DISPONIBLE', @roo);
+    UPDATE camas SET estado = 'LIMPIEZA' WHERE codigo = 'ROO-GEN-04';
+    UPDATE camas SET estado = 'MANTENIMIENTO', observacion = 'Cambio de colchón' WHERE codigo = 'ROO-PED-06';
+    UPDATE recursos_hospitalarios r SET
+      total = (SELECT COUNT(*) FROM camas c WHERE c.recurso_id = r.id),
+      disponible = (SELECT COUNT(*) FROM camas c WHERE c.recurso_id = r.id AND c.estado = 'DISPONIBLE')
+      WHERE r.tipo = 'cama' AND r.sede_id = @roo;
+    INSERT INTO recursos_hospitalarios (tipo, descripcion, disponible, total, sede_id) VALUES
+      ('ambulancia', 'Ambulancias de traslado', 3, 5, @roo),
+      ('cupo_consulta', 'Cupos de consulta externa (hoy)', 25, 60, @roo);
+    INSERT INTO demo_resultado (resultado) VALUES ('Segunda sede (Hospital Roosevelt) cargada');
+  END IF;
 END //
 DELIMITER ;
 
